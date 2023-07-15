@@ -1,7 +1,7 @@
 # FlutterUneal
 Flutter + Unreal, Integrate Flutter into Unreal Engine
 
-Build Unreal game UI with Dart, Lua or Typescipt
+Build Unreal game UI with Dart, Lua or Typescript
 
 Supports D3D11 and Vulkan on Windows; Android and iOS are in the works.
 
