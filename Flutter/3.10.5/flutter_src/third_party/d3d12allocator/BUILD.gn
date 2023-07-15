@@ -1,0 +1,9 @@
+
+config("d3d12allocator_config") {
+    include_dirs = [ "//third_party/externals/d3d12allocator/src" ]
+}
+
+source_set("d3d12allocator") {
+    sources = [ "//third_party/externals/d3d12allocator/src/D3D12MemAlloc.cpp" ]
+    public_configs = [":d3d12allocator_config",]
+}

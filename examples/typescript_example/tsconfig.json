@@ -1,0 +1,29 @@
+{
+  "include": [
+    "src/**/*",
+  ],
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["esnext"],
+    "moduleResolution": "node",
+    "types": [
+        "lua-types/5.4",
+        "@typescript-to-lua/language-extensions"
+    ],
+    "strict": true,
+    "rootDir": "src",
+    "outDir": "../lua_example/lua",
+    "baseUrl": "src",
+    "strictNullChecks" : false
+  },
+  "tstl": {
+    "luaTarget": "5.4",
+    "noImplicitSelf": true,
+    "luaLibImport": "none",
+    "luaPlugins": [
+      {
+        "name": "./plugins/lua_inline.js"
+      }
+    ]
+  }
+}

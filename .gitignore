@@ -1,0 +1,6 @@
+pubspec.lock
+Generated.xcconfig
+flutter_export_environment.sh
+Flutter-Generated.xcconfig
+/examples/typescript_example/node_modules
+/examples/typescript_example/package-lock.json

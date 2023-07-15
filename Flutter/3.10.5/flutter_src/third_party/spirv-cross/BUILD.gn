@@ -1,0 +1,10 @@
+
+config("spirv_cross_config") {
+    include_dirs = [ "//third_party/vulkan-deps/spirv-cross/src" ]
+    defines = [ "SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS" ]
+}
+
+group("spirv_cross") {
+    deps = ["//third_party/skia/third_party/spirv-cross:spirv_cross"]
+    public_configs = [":spirv_cross_config",]
+}

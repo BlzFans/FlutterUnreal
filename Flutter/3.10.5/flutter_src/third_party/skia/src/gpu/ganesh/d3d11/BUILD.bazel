@@ -1,0 +1,38 @@
+load("//bazel:macros.bzl", "exports_files_legacy", "split_srcs_and_hdrs")
+
+licenses(["notice"])
+
+exports_files_legacy()
+
+D3D11_FILES = [
+    "GrD3D11Attachment.h",
+    "GrD3D11Attachment.cpp",
+    "GrD3D11Buffer.h",
+    "GrD3D11Buffer.cpp",
+    "GrD3D11Caps.cpp",
+    "GrD3D11Caps.h",
+    "GrD3D11Gpu.cpp",
+    "GrD3D11Gpu.h",
+    "GrD3D11OpsRenderPass.h",
+    "GrD3D11OpsRenderPass.cpp",
+    "GrD3D11RenderTask.h",
+    "GrD3D11SurfaceProxy.h",
+    "GrD3D11Texture.h",
+    "GrD3D11Texture.cpp",
+    "GrD3D11RenderTarget.h",
+    "GrD3D11RenderTarget.cpp",
+    "GrD3D11TextureRenderTarget.h",
+    "GrD3D11TextureRenderTarget.cpp",
+    "GrD3D11Types.cpp",
+    "GrD3D11ProgramBuilder.cpp",
+    "GrD3D11ProgramBuilder.h",
+    "GrD3D11ResourceProvider.cpp",
+    "GrD3D11ResourceProvider.h",
+    "GrD3D11UniformDataManager.cpp",
+    "GrD3D11UniformDataManager.h",
+]
+
+split_srcs_and_hdrs(
+    name = "d3d11",
+    files = D3D11_FILES,
+)

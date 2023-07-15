@@ -1,0 +1,39 @@
+
+_src = get_path_info("../src", "abspath")
+_include = get_path_info("../include", "abspath")
+
+skia_d3d11_public = [
+  "$_include/gpu/d3d11/GrD3D11Types.h",
+  "$_include/gpu/d3d/GrD3DBackendContext.h"
+]
+
+skia_d3d11_sources = [
+  "$_include/gpu/d3d11/GrD3D11Types.h",
+  "$_include/private/gpu/ganesh/GrD3D11TypesPriv.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Attachment.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Attachment.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Buffer.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Buffer.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Caps.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Caps.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Gpu.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Gpu.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11OpsRenderPass.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11OpsRenderPass.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11OpTarget.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11RenderTask.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11SurfaceProxy.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Texture.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Texture.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11RenderTarget.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11RenderTarget.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11TextureRenderTarget.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11TextureRenderTarget.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11Types.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11ProgramBuilder.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11ProgramBuilder.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11ResourceProvider.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11ResourceProvider.h",
+  "$_src/gpu/ganesh/d3d11/GrD3D11UniformDataManager.cpp",
+  "$_src/gpu/ganesh/d3d11/GrD3D11UniformDataManager.h",
+]

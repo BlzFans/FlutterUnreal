@@ -1,0 +1,27 @@
+name: dart_example
+description: dart example
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.5 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.2
+  flutter_unreal:
+    path: ../packages/flutter_unreal
+  next_gen_ui_demo:
+    path: ../packages/next_gen_ui_demo
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true

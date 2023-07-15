@@ -1,0 +1,17 @@
+{
+    "name": "FlutterUnreal",
+    "devDependencies": {
+        "@typescript-eslint/eslint-plugin": "^5.62.0",
+        "@typescript-to-lua/language-extensions": "^1.0.0",
+        "eslint": "^8.45.0",
+        "eslint-config-prettier": "^8.8.0",
+        "lua-types": "^2.13.1",
+        "typescript": "^5.1.6",
+        "typescript-to-lua": "^1.16.3"
+    },
+    "private": true,
+    "scripts": {
+        "build": "tstl",
+        "dev": "tstl --watch"
+    }
+}
