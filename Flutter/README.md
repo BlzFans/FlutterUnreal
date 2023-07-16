@@ -3,7 +3,7 @@ Reference https://github.com/flutter/flutter/wiki/Compiling-the-engine
 
 Notice: src/flutter must be switched to tag 3.10.5
 
-# 2. Install original Flutter SDK
+# 2. Install the original Flutter SDK
 https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_3.10.5-stable.zip
 
 # 3. Override some modify to Flutter Engine
