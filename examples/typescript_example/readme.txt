@@ -2,7 +2,6 @@
 https://typescripttolua.github.io/docs/getting-started
 
 npm update --save
-npm run build
+npm run build 
 
-output:
-examples/lua_example/lua
+The output lua files at examples/lua_example/lua
