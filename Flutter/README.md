@@ -11,7 +11,9 @@ Copy FlutterUnreal/Flutter/3.10.5/flutter_src/flutter to the original Flutter En
 
 Copy FlutterUnreal/Flutter/3.10.5/flutter_src/third_party to the original Flutter Engine src/third_party
 
-Build Flutter Engine 
+Run command "ninja -C out/host_release" to Build Flutter Engine 
+
+Copy flutter_embedder.h, flutter_engine.dll, flutter_engine.dll.lib form out/host_release to UnrealDemo/Plugins/FlutterUnreal/Source/ThirdParty/flutter_engine
 
 # 4. Override some modify to Flutter SDK
 Copy FlutterUnreal/Flutter/3.10.5/flutter_sdk/packages/flutter/lib/src/gestures/binding.dart to your Flutter SDK path and overwrite it
