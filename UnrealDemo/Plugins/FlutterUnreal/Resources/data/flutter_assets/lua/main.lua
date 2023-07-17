@@ -1,8 +1,8 @@
-print("======lua main======")
+print("===lua main===")
 
 require "utils"
 if file_exists(getLuaPath() .. "/flutter_main.lua") then
-    require(flutter_main)
+    require("flutter_main")
     return
 end
 

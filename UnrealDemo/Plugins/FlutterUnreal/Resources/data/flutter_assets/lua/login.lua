@@ -48,6 +48,7 @@ do
                                 value = rememberMe,
                                 onChanged = function(value)
                                     rememberMe = value
+                                    setState()
                                 end,
                                 activeColor = buttonColor
                             }),

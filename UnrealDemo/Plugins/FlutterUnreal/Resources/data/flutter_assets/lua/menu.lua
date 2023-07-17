@@ -53,6 +53,52 @@ do
                     })
                 }
             })
+            local media = MediaQuery.of(context)
+            local size = Size(250, 300)
+            if position == nil then
+                position = aligmentToPosition(media.size, size, FractionalOffset.center)
+            end
+            widget = Container({
+                width = size.width,
+                height = size.height,
+                padding = EdgeInsets.only({left = 5, right = 5, top = 5, bottom = 5}),
+                decoration = BoxDecoration({
+                    borderRadius = BorderRadius.circular(12),
+                    color = colorScheme.background:withOpacity(0.3)
+                }),
+                child = widget
+            })
+            widget = BlockPointer({child = widget})
+            local useAlignment = true
+            if useAlignment then
+                if alignment == nil then
+                    alignment = positionToAlignment(media.size, size, position)
+                end
+                widget = Align({
+                    alignment = alignment,
+                    child = GestureDetector({
+                        onPanUpdate = function(e)
+                            local pos = aligmentToPosition(media.size, size, alignment)
+                            pos = Offset(pos.dx + e.delta.dx, pos.dy + e.delta.dy)
+                            alignment = positionToAlignment(media.size, size, pos)
+                            setState()
+                        end,
+                        child = widget
+                    })
+                })
+            else
+                widget = Stack({children = {Positioned({
+                    left = position.dx,
+                    top = position.dy,
+                    child = GestureDetector({
+                        onPanUpdate = function(e)
+                            position = Offset(position.dx + e.delta.dx, position.dy + e.delta.dy)
+                            setState()
+                        end,
+                        child = widget
+                    })
+                })}})
+            end
             return widget
         end})
     end

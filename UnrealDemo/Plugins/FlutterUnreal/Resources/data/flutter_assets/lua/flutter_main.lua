@@ -35,6 +35,6 @@ do
     end
 end
 function gotoPage(routeName)
-    Navigator.of(NavigationService.context()):pushReplacementNamed(routeName)
+    Navigator.of(NavigationService.context()):pushNamed(routeName)
 end
 flutter.main()
