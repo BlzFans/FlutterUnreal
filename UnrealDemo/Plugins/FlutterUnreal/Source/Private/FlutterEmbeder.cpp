@@ -8,8 +8,27 @@
 #include "HardwareInfo.h"
 
 #if PLATFORM_WINDOWS
-#include "D3D11RHIBasePrivate.h"
-#include "Windows/D3D11RHI/Private/D3D11RHIPrivate.h"
+
+#define FindShaderResourceDXGIFormat FindShaderResourceDXGIFormat_D3D12
+#define FindUnorderedAccessDXGIFormat FindUnorderedAccessDXGIFormat_D3D12
+#define FindDepthStencilDXGIFormat FindDepthStencilDXGIFormat_D3D12
+#define HasStencilBits HasStencilBits_D3D12
+#define GetRenderTargetFormat GetRenderTargetFormat_D3D12
+#define FD3DGPUProfiler FD3DGPUProfiler_D3D12
+
+#include "D3D12RHIPrivate.h"
+#include "D3D12Util.h"
+
+#undef FindShaderResourceDXGIFormat
+#undef FindUnorderedAccessDXGIFormat
+#undef FindDepthStencilDXGIFormat
+#undef HasStencilBits
+#undef GetRenderTargetFormat
+#undef FD3DGPUProfiler
+
+#include "D3D11RHIPrivate.h"
+#include "D3D11Util.h"
+
 #include "Windows/WindowsPlatformApplicationMisc.h"
 #endif
 
@@ -77,6 +96,12 @@ void* D3D11GetBackBuffer()
     return GFlutterUnrealModule->GetViewPortRHI()->GetNativeBackBufferTexture();
 #endif
 }
+
+void* D3D12GetBackBuffer()
+{
+    return ((FD3D12Resource*)GFlutterUnrealModule->GetViewPortRHI()->GetNativeBackBufferTexture())->GetResource();
+}
+
 #endif
 
 bool VulkanPresentCallback(void* user_data, const FlutterVulkanImage* image)
@@ -92,6 +117,12 @@ bool OpenGLPresentCallback(void* user_data)
 }
 
 bool D3D11PresentCallback(void* user_data)
+{
+    g_flutterPresented = true;
+    return true;
+}
+
+bool D3D12PresentCallback(void* user_data)
 {
     g_flutterPresented = true;
     return true;
@@ -265,6 +296,20 @@ FlutterRendererConfig flutterGetRenderConfig()
         config.d3d11.getBackBuffer = D3D11GetBackBuffer;
         config.d3d11.present = D3D11PresentCallback;
     }
+    else if (g_flutterRendererType == kD3D12)
+    {
+        FD3D12DynamicRHI* DynamicRHI = FD3D12DynamicRHI::GetD3DRHI();
+
+        config.type = kD3D12;
+        config.d3d12.struct_size = sizeof(config.d3d12);
+
+        config.d3d12.adapter = DynamicRHI->GetAdapter().GetAdapter();
+        config.d3d12.device = DynamicRHI->GetAdapter().GetD3DDevice();
+        config.d3d12.commandQueue = DynamicRHI->RHIGetD3DCommandQueue();
+
+        config.d3d12.getBackBuffer = D3D12GetBackBuffer;
+        config.d3d12.present = D3D12PresentCallback;
+    }
 #endif
     else
     {
@@ -402,7 +447,7 @@ void flutterEngineInit(const char* command_line)
     args.struct_size = sizeof(FlutterProjectArgs);
     args.assets_path = assets_path.c_str();
     args.icu_data_path = icu_data_path.c_str();  // Find this in your bin/cache directory.
-    args.persistent_cache_path = persistent_cache_path.c_str();
+    //args.persistent_cache_path = persistent_cache_path.c_str();
     args.command_line_argc = argv.size();                       //ARRAY_SIZE(command_line_argv);
     args.command_line_argv = argv.empty() ? nullptr : &argv[0]; //command_line_argv;
 
@@ -512,6 +557,11 @@ void flutterEngineRender()
     if (g_flutterRendererType == kD3D11)
     {
         if (D3D11GetBackBuffer() == nullptr)
+            return;
+    }
+    else if (g_flutterRendererType == kD3D12)
+    {
+        if (D3D12GetBackBuffer() == nullptr)
             return;
     }
 #endif

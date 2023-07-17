@@ -16,7 +16,7 @@
  * Each library is built with a separate copy of spirv.h (or spirv.hpp), so we
  * avoid conflicts by never including both in the same cpp.
  */
-
+int shader_model = 51;
 namespace SkSL {
 
 bool SPIRVtoHLSL(const std::string& spirv, std::string* hlsl) {
@@ -29,7 +29,7 @@ bool SPIRVtoHLSL(const std::string& spirv, std::string* hlsl) {
     optionsGLSL.force_zero_initialized_variables = true;
 
     spirv_cross::CompilerHLSL::Options optionsHLSL;
-    optionsHLSL.shader_model = 40;
+    optionsHLSL.shader_model = shader_model;
     // PointCoord and PointSize are not supported in HLSL
     optionsHLSL.point_coord_compat = true;
     optionsHLSL.point_size_compat = true;

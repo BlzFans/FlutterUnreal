@@ -54,18 +54,24 @@ public class FlutterUnreal : ModuleRules
 			//PrivateDependencyModuleNames.Add("OpenGLDrv");
 
             PrivateDependencyModuleNames.AddRange(new string[] { "D3D11RHI" });
-            PrivateIncludePaths.AddRange(
-                new string[] {
-                        Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/Windows/D3D11RHI/Private")),
-                        Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/Windows/D3D11RHI/Private/Windows")),
-                }
-            );
+			PrivateIncludePaths.AddRange(
+				new string[] {
+					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/Windows/D3D11RHI/Private")),
+					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/Windows/D3D11RHI/Private/Windows")),
+
+					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/D3D12RHI/Private")),
+					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/D3D12RHI/Private/Windows")),
+				}
+			);
             PrivateIncludePaths.AddRange(
                 new string[] {
                         Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/VulkanRHI/Private")),
                         Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/VulkanRHI/Private/Windows"))
                 }
             );
+
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "DX11");
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
             AddEngineThirdPartyPrivateStaticDependencies(Target, "Vulkan");
             AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenGL");
 

@@ -28,6 +28,7 @@
 #endif
 
 #include "flutter/shell/platform/embedder/embedder_surface_d3d11.h"
+#include "flutter/shell/platform/embedder/embedder_surface_d3d12.h"
 
 namespace flutter {
 
@@ -93,11 +94,17 @@ class PlatformViewEmbedder final : public PlatformView {
       std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder);
 #endif
 
-  // Creates a platform view that sets up an Vulkan rasterizer.
   PlatformViewEmbedder(
       PlatformView::Delegate& delegate,
       const flutter::TaskRunners& task_runners,
       std::unique_ptr<EmbedderSurfaceD3D11> embedder_surface,
+      PlatformDispatchTable platform_dispatch_table,
+      std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder);
+
+  PlatformViewEmbedder(
+      PlatformView::Delegate& delegate,
+      const flutter::TaskRunners& task_runners,
+      std::unique_ptr<EmbedderSurfaceD3D12> embedder_surface,
       PlatformDispatchTable platform_dispatch_table,
       std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder);
 

@@ -99,3 +99,14 @@ source_set("gpu_surface_d3d11") {
                   "//flutter/shell/platform/embedder:embedder_headers",
                 ]
 }
+
+source_set("gpu_surface_d3d12") {
+  sources = [
+    "gpu_surface_d3d12.cc",
+    "gpu_surface_d3d12.h",
+    "gpu_surface_d3d12_delegate.h",
+  ]
+  public_deps = gpu_common_deps + [
+                  "//flutter/shell/platform/embedder:embedder_headers",
+                ]
+}

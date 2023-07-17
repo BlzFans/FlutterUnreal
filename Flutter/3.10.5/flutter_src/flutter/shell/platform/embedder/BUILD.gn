@@ -146,6 +146,8 @@ template("embedder_source_set") {
       sources += [
         "embedder_surface_d3d11.cc",
         "embedder_surface_d3d11.h",
+        "embedder_surface_d3d12.cc",
+        "embedder_surface_d3d12.h",
       ]
     }
 

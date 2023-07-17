@@ -256,10 +256,10 @@ static gr_cp<ID3DBlob> GrCompileHLSLShader(GrD3D11Gpu* gpu,
     const char* compileTarget = nullptr;
     switch (kind) {
         case SkSL::ProgramKind::kVertex:
-            compileTarget = "vs_4_0";
+            compileTarget = "vs_5_0";
             break;
         case SkSL::ProgramKind::kFragment:
-            compileTarget = "ps_4_0";
+            compileTarget = "ps_5_0";
             break;
         default:
             SkUNREACHABLE;
@@ -316,6 +316,9 @@ gr_cp<ID3DBlob> GrD3D11ProgramBuilder::compileD3D11Program(
 #else
     const std::string& src = sksl;
 #endif
+
+    extern int shader_model;
+    shader_model = 50;
 
     std::unique_ptr<SkSL::Program> program = fGpu->shaderCompiler()->convertProgram(
             kind, src, settings);

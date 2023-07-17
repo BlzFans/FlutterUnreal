@@ -203,6 +203,14 @@ static bool IsD3D11RendererConfigValid(const FlutterRendererConfig* config) {
   return true;
 }
 
+static bool IsD3D12RendererConfigValid(const FlutterRendererConfig* config) {
+  if (config->type != kD3D12) {
+    return false;
+  }
+
+  return true;
+}
+
 static bool IsRendererValid(const FlutterRendererConfig* config) {
   if (config == nullptr) {
     return false;
@@ -219,6 +227,8 @@ static bool IsRendererValid(const FlutterRendererConfig* config) {
       return IsVulkanRendererConfigValid(config);
     case kD3D11:
       return IsD3D11RendererConfigValid(config);
+    case kD3D12:
+      return IsD3D12RendererConfigValid(config);
     default:
       return false;
   }
@@ -673,6 +683,59 @@ InferD3D11PlatformViewCreationCallback(
 }
 
 static flutter::Shell::CreateCallback<flutter::PlatformView>
+InferD3D12PlatformViewCreationCallback(
+    const FlutterRendererConfig* config,
+    void* user_data,
+    const flutter::PlatformViewEmbedder::PlatformDispatchTable&
+        platform_dispatch_table,
+    std::unique_ptr<flutter::EmbedderExternalViewEmbedder>
+        external_view_embedder) {
+  if (config->type != kD3D12) {
+    return nullptr;
+  }
+
+  const FlutterD3D12RendererConfig* d3d12_config = &config->d3d12;
+
+  auto d3d12_get_back_buffer =
+      [ptr = d3d12_config->getBackBuffer](
+          const SkISize& frame_size) -> ID3D12Resource* {
+    return (ID3D12Resource*)ptr();
+  };
+
+  auto d3d12_present = [ptr = d3d12_config->present, user_data]() -> bool {
+    return ptr(user_data);
+  };
+
+  flutter::EmbedderSurfaceD3D12::D3D12DispatchTable d3d12_dispatch_table = {
+      .get_back_buffer = d3d12_get_back_buffer,
+      .present = d3d12_present,
+  };
+
+  std::shared_ptr<flutter::EmbedderExternalViewEmbedder> view_embedder =
+      std::move(external_view_embedder);
+
+  std::unique_ptr<flutter::EmbedderSurfaceD3D12> embedder_surface =
+      std::make_unique<flutter::EmbedderSurfaceD3D12>(
+          (IDXGIAdapter1*)d3d12_config->adapter,
+          (ID3D12Device*)d3d12_config->device,
+          (ID3D12CommandQueue*)d3d12_config->commandQueue,
+          d3d12_dispatch_table, view_embedder);
+
+  return fml::MakeCopyable(
+      [embedder_surface = std::move(embedder_surface), platform_dispatch_table,
+       external_view_embedder =
+           std::move(view_embedder)](flutter::Shell& shell) mutable {
+        return std::make_unique<flutter::PlatformViewEmbedder>(
+            shell,                             // delegate
+            shell.GetTaskRunners(),            // task runners
+            std::move(embedder_surface),       // embedder surface
+            platform_dispatch_table,           // platform dispatch table
+            std::move(external_view_embedder)  // external view embedder
+        );
+      });
+}
+
+static flutter::Shell::CreateCallback<flutter::PlatformView>
 InferSoftwarePlatformViewCreationCallback(
     const FlutterRendererConfig* config,
     void* user_data,
@@ -740,6 +803,10 @@ InferPlatformViewCreationCallback(
           std::move(external_view_embedder));
     case kD3D11:
       return InferD3D11PlatformViewCreationCallback(
+          config, user_data, platform_dispatch_table,
+          std::move(external_view_embedder));
+    case kD3D12:
+      return InferD3D12PlatformViewCreationCallback(
           config, user_data, platform_dispatch_table,
           std::move(external_view_embedder));
     default:
@@ -3314,9 +3381,6 @@ void FlutterEngineResetContext(FLUTTER_API_SYMBOL(FlutterEngine) engine) {
 
   auto rasterizer = embedder_engine->GetShell().GetRasterizer();
   if (rasterizer->GetGrContext()->backend() == GrBackendApi::kOpenGL) {
-    // rasterizer->GetGrContext()->resetGLTextureBindings();
-    // rasterizer->GetGrContext()->resetContext(
-    //     kTextureBinding_GrGLBackendState | kMisc_GrGLBackendState);
     rasterizer->GetGrContext()->resetContext();
   }
 }

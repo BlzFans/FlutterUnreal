@@ -127,7 +127,22 @@ PlatformViewEmbedder::PlatformViewEmbedder(
           GetWeakPtr(),
           task_runners.GetPlatformTaskRunner())),
       platform_dispatch_table_(std::move(platform_dispatch_table))
-{} 
+{}
+
+PlatformViewEmbedder::PlatformViewEmbedder(
+    PlatformView::Delegate& delegate,
+    const flutter::TaskRunners& task_runners,
+    std::unique_ptr<EmbedderSurfaceD3D12> embedder_surface,
+    PlatformDispatchTable platform_dispatch_table,
+    std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder)
+    : PlatformView(delegate, task_runners),
+      external_view_embedder_(std::move(external_view_embedder)),
+      embedder_surface_(std::move(embedder_surface)),
+      platform_message_handler_(new EmbedderPlatformMessageHandler(
+          GetWeakPtr(),
+          task_runners.GetPlatformTaskRunner())),
+      platform_dispatch_table_(std::move(platform_dispatch_table)) 
+{}
 
 PlatformViewEmbedder::~PlatformViewEmbedder() = default;
 

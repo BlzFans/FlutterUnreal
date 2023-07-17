@@ -94,7 +94,7 @@ GrDirectContext* GPUSurfaceD3D11::GetContext() {
   return skia_context_.get();
 }
 
-SkColorType ColorTypeFromFormat(const DXGI_FORMAT format) {
+static SkColorType ColorTypeFromFormat(const DXGI_FORMAT format) {
   switch (format) {
     case DXGI_FORMAT_R8G8B8A8_UNORM:
     case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:

@@ -35,6 +35,7 @@ template("shell_gpu_configuration") {
 
     if (is_win) {
       public_deps += [ "//flutter/shell/gpu:gpu_surface_d3d11" ]
+      public_deps += [ "//flutter/shell/gpu:gpu_surface_d3d12" ]
     }
   }
 

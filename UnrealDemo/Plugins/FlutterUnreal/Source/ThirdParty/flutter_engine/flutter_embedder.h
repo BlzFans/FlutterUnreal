@@ -85,6 +85,7 @@ typedef enum {
   kMetal,
   kVulkan,
   kD3D11,
+  kD3D12,
 } FlutterRendererType;
 
 /// Additional accessibility features that may be enabled by the platform.
@@ -594,6 +595,22 @@ typedef struct {
   FlutterD3D11DeviceContextHandle deviceContext;
 } FlutterD3D11RendererConfig;
 
+typedef void* FlutterAdapterHandle;
+typedef void* FlutterD3D12DeviceHandle;
+typedef void* FlutterD3D12CommandQueueHandle;
+typedef void* FlutterD3D12Resource;
+
+typedef FlutterD3D12Resource (*FlutterD3D12BackBufferCallback)();
+
+typedef struct {
+  size_t struct_size;
+  FlutterD3D12BackBufferCallback getBackBuffer;
+  BoolCallback present;
+  FlutterAdapterHandle adapter;
+  FlutterD3D12DeviceHandle device;
+  FlutterD3D12CommandQueueHandle commandQueue;
+} FlutterD3D12RendererConfig;
+
 /// Alias for id<MTLDevice>.
 typedef const void* FlutterMetalDeviceHandle;
 
@@ -818,6 +835,7 @@ typedef struct {
     FlutterMetalRendererConfig metal;
     FlutterVulkanRendererConfig vulkan;
     FlutterD3D11RendererConfig d3d11;
+    FlutterD3D12RendererConfig d3d12;
   };
 } FlutterRendererConfig;
 

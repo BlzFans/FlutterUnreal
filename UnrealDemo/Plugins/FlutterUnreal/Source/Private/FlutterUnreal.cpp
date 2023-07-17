@@ -10,8 +10,9 @@
 #include "VulkanRHIPrivate.h"
 #include "VulkanPendingState.h"
 #include "VulkanContext.h"
-#include "D3D11RHIBasePrivate.h"
-#include "Windows/D3D11RHI/Private/D3D11RHIPrivate.h"
+
+#include "D3D11RHIPrivate.h"
+#include "D3D11Util.h"
 #endif
 
 #include "Interfaces/IPluginManager.h"
@@ -79,6 +80,10 @@ void FFlutterUnrealModule::OnViewportCreated()
 	{
 		g_flutterRendererType = kD3D11;
 	}
+	else if (RHIName == TEXT("D3D12"))
+	{
+		g_flutterRendererType = kD3D12;
+	}
 	else 
 	{
 		check(false);
@@ -105,6 +110,7 @@ void FFlutterUnrealModule::OnViewportCreated()
 		{
 			CVarRHIThreadEnable->Set(0);
 		}*/
+
 		if (IsRunningRHIInSeparateThread())
 		{
 			SetRHIThreadEnabled(false, false);
@@ -168,7 +174,7 @@ void FFlutterUnrealModule::StartCustomPresent(UGameViewportClient* GameViewport)
 			CustomPresent = new FFlutterUnrealCustomPresent();
 			viewport_rhi->GetReference()->SetCustomPresent(CustomPresent);
 
-			if (g_flutterRendererType == kD3D11)
+			if (g_flutterRendererType == kD3D11 || g_flutterRendererType == kD3D12)
 			{
 				ViewportRHI = *viewport_rhi;
 			}
