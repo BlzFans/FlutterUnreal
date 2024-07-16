@@ -21,96 +21,100 @@ namespace flutter {
     export function MenuPage(): Widget {
         return StatefulBuilder({
             builder(context, setState) {
-                let theme = Theme.of(context)
-                let colorScheme = theme.colorScheme
-                let widget: Widget
+                return LayoutBuilder({ 
+                    builder(context, constraints) {
+                        let theme = Theme.of(context)
+                        let colorScheme = theme.colorScheme
+                        let widget: Widget
 
-                widget = Column({
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                        SizedBox({height: 16}),
-                        ConstrainedBox({
-                        constraints: BoxConstraints({minWidth: double.infinity}),
-                            child: TextButton({
-                                onPressed () {
-                                    gotoPage("/counter_example")
-                                },
-                                child: Text("Counter Example")
-                            })
-                        }),
-                        ConstrainedBox({
-                            constraints: BoxConstraints({minWidth: double.infinity}),
-                            child: TextButton({
-                                onPressed() {
-                                    showLoginDialog(context);
-                                },
-                                child: Text("Login Dialog")
-                            })
-                        }),
-                        ConstrainedBox({
-                            constraints: BoxConstraints({minWidth: double.infinity}),
-                            child: TextButton({
-                                onPressed() {
-                                    gotoPage("/next_gen_ui_demo");
-                                },
-                                child: Text("Next Generation UI Demo")
-                            })
-                        }),
-                    ]
-                })
+                        widget = Column({
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                                SizedBox({height: 16}),
+                                ConstrainedBox({
+                                constraints: BoxConstraints({minWidth: double.infinity}),
+                                    child: TextButton({
+                                        onPressed () {
+                                            gotoPage("/counter_example")
+                                        },
+                                        child: Text("Counter Example")
+                                    })
+                                }),
+                                ConstrainedBox({
+                                    constraints: BoxConstraints({minWidth: double.infinity}),
+                                    child: TextButton({
+                                        onPressed() {
+                                            showLoginDialog(context);
+                                        },
+                                        child: Text("Login Dialog")
+                                    })
+                                }),
+                                ConstrainedBox({
+                                    constraints: BoxConstraints({minWidth: double.infinity}),
+                                    child: TextButton({
+                                        onPressed() {
+                                            gotoPage("/next_gen_ui_demo");
+                                        },
+                                        child: Text("Next Generation UI Demo")
+                                    })
+                                }),
+                            ]
+                        })
 
-                let media = MediaQuery.of(context)
-                let size = Size(250, 300)
-                position ??= aligmentToPosition(media.size, size, FractionalOffset.center)
+                        let parentSize = Size(constraints.maxWidth, constraints.maxHeight)
+                        let size = Size(250, 300)
+                        position ??= aligmentToPosition(parentSize, size, FractionalOffset.center)
 
-                widget = Container({
-                    width: size.width,
-                    height: size.height,
-                    padding: EdgeInsets.only({left: 5, right: 5, top: 5, bottom: 5}),
-                    decoration: BoxDecoration({
-                        borderRadius: BorderRadius.circular(12),
-                        color: colorScheme.background.withOpacity(0.3),
-                    }),
-                    child: widget
-                })
-          
-                widget = BlockPointer({child: widget});
-          
-                let useAlignment = true;
-                if (useAlignment) {
-                    alignment ??= positionToAlignment(media.size, size, position!);
-                    widget = Align({
-                        alignment: alignment,
-                        child: GestureDetector({
-                            onPanUpdate(e: DragUpdateDetails) {
-                                let pos = aligmentToPosition(media.size, size, alignment)
-                                pos = Offset(pos.dx + e.delta.dx, pos.dy + e.delta.dy)
-                                alignment = positionToAlignment(media.size, size, pos)
-                
-                                setState()
-                            },
+                        widget = Container({
+                            width: size.width,
+                            height: size.height,
+                            padding: EdgeInsets.only({left: 5, right: 5, top: 5, bottom: 5}),
+                            decoration: BoxDecoration({
+                                borderRadius: BorderRadius.circular(12),
+                                color: colorScheme.background.withOpacity(0.3),
+                            }),
                             child: widget
                         })
-                    })
-                } else {
-                  widget = Stack ({
-                        children:[
-                            Positioned({
-                                left: position.dx,
-                                top: position.dy,
+                
+                        widget = BlockPointer({child: widget});
+                
+                        let useAlignment = true;
+                        if (useAlignment) {
+                            alignment ??= positionToAlignment(parentSize, size, position!);
+                            widget = Align({
+                                alignment: alignment,
                                 child: GestureDetector({
                                     onPanUpdate(e: DragUpdateDetails) {
-                                        position = Offset(position.dx + e.delta.dx, position.dy + e.delta.dy)
+                                        let pos = aligmentToPosition(parentSize, size, alignment)
+                                        pos = Offset(pos.dx + e.delta.dx, pos.dy + e.delta.dy)
+                                        alignment = positionToAlignment(parentSize, size, pos)
+                        
                                         setState()
                                     },
                                     child: widget
                                 })
                             })
-                        ]
-                    })
-                }
+                        } else {
+                        widget = Stack ({
+                                children:[
+                                    Positioned({
+                                        left: position.dx,
+                                        top: position.dy,
+                                        child: GestureDetector({
+                                            onPanUpdate(e: DragUpdateDetails) {
+                                                position = Offset(position.dx + e.delta.dx, position.dy + e.delta.dy)
+                                                setState()
+                                            },
+                                            child: widget
+                                        })
+                                    })
+                                ]
+                            })
+                        }
 
-                return widget
+                        return widget
+                    }
+                })
             }
         })
     }

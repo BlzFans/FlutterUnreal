@@ -1,8 +1,8 @@
 print("===lua main===")
 
 require "utils"
-if file_exists(getLuaPath() .. "/flutter_main.lua") then
-    require("flutter_main")
+if file_exists(getLuaPath() .. "/ts_main.lua") then
+    require("ts_main")
     return
 end
 
@@ -18,4 +18,4 @@ local widget = Center {
     )
 }
 
-runApp(widget)
+runApp(GameView({child = widget}))

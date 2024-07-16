@@ -1,7 +1,8 @@
 
-https://typescripttolua.github.io/docs/getting-started
+reference: https://typescripttolua.github.io/docs/getting-started
 
-npm update --save
-npm run build 
+run the following command
+1. npm update --save
+2. npm run build
 
-The output lua files at examples/lua_example/lua
+The output lua files are stored in examples/lua_example/lua

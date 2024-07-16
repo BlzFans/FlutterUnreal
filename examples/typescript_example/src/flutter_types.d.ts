@@ -907,6 +907,36 @@ declare namespace Size {
 }
 
 interface BoxConstraints {
+
+    readonly biggest: Size
+
+    readonly flipped: BoxConstraints
+
+    readonly hasBoundedHeight: bool
+
+    readonly hasBoundedWidth: bool
+
+    readonly hasInfiniteHeight: bool
+
+    readonly hasInfiniteWidth: bool
+
+    readonly hasTightHeight: bool
+
+    readonly hasTightWidth: bool
+
+    readonly isNormalized: bool
+
+    readonly isTight: bool
+
+    readonly maxHeight: double
+
+    readonly maxWidth: double
+
+    readonly minHeight: double
+
+    readonly minWidth: double
+
+    readonly smallest: Size
 }
 
 declare function BoxConstraints({minWidth, maxWidth, minHeight, maxHeight}? : {minWidth?:double, maxWidth?:double, minHeight?:double, maxHeight?:double}):BoxConstraints
@@ -1737,6 +1767,16 @@ interface DefaultTabController {
 
 declare function DefaultTabController({key, length, initialIndex, child, animationDuration} : {key?:Key, length:int, initialIndex?:int, child:Widget, animationDuration?:Duration}):DefaultTabController
 
+interface LayoutBuilder {
+}
+
+declare function LayoutBuilder({key, builder} : {key?:Key, builder:LayoutWidgetBuilder}):LayoutBuilder
+
+interface GameView {
+}
+
+declare function GameView({key, child} : {key?:Key, child:Widget}):GameView
+
 declare function runApp(app:Widget ):void
 
 declare function showDialog({context, builder, barrierDismissible, barrierColor, barrierLabel, useSafeArea, useRootNavigator, routeSettings, anchorPoint} : {context:BuildContext, builder:WidgetBuilder, barrierDismissible?:bool, barrierColor?:Color, barrierLabel?:string, useSafeArea?:bool, useRootNavigator?:bool, routeSettings?:RouteSettings, anchorPoint?:Offset} ):Future
@@ -2396,6 +2436,8 @@ type GestureTapDownCallback = (details: TapDownDetails) => void
 type GestureTapUpCallback = (details: TapUpDetails) => void
 
 type IntValueChanged = (value: int) => void
+
+type LayoutWidgetBuilder = (context:BuildContext, constraints:BoxConstraints) => Widget
 
 type MaterialPropertyResolver_BorderSide_ = (states: MaterialState[]) => BorderSide
 

@@ -1,10 +1,5 @@
 part of flutter_unreal;
 
-typedef VoidPtr = ffi.Pointer<ffi.Void>;
-typedef Utf8Ptr = ffi.Pointer<Utf8>;
-typedef Int64Ptr = ffi.Pointer<ffi.Int64>;
-typedef Int32Ptr = ffi.Pointer<ffi.Int32>;
-
 late final VoidPtr g_L;
 
 @ffi.Native<ffi.Void Function(VoidPtr, ffi.Int64, ffi.Int32)>(symbol: 'luaPushObject')
@@ -246,14 +241,6 @@ void luaSetString(VoidPtr L, String name, String v)
 void luaSetObject(VoidPtr L, String name, Object o) {
   luaPushObject(L, o);
   luaSetValue(L, name);
-}
-
-@ffi.Native<ffi.Void Function(Utf8Ptr name, ffi.Int64 address)>(symbol: 'setDartFunctionPtr')
-external void _setDartFunctionPtr(Utf8Ptr name, int address);
-void setDartFunctionPtr(String name, int address) {
-  final nameUtf8 = name.toNativeUtf8();
-  _setDartFunctionPtr(nameUtf8, address);
-  malloc.free(nameUtf8);
 }
 
 @ffi.Native<VoidPtr Function()>()
@@ -786,6 +773,19 @@ StatefulWidgetBuilder? _getStatefulWidgetBuilder(VoidPtr L, int idx, String? nam
 
   return (BuildContext context, StateSetter setState) {
     return callback.invoke<Widget>(L, [context, setState]);
+  };
+}
+
+typedef LayoutWidgetBuilder =  Widget Function(BuildContext context, BoxConstraints constraints);
+
+LayoutWidgetBuilder? _getLayoutWidgetBuilder(VoidPtr L, int idx, String? name) {
+  var callback = _getLuaCallback(L, idx, name);
+  if (callback == null) {
+    return null;
+  }
+
+  return (BuildContext context, BoxConstraints constraints) {
+    return callback.invoke<Widget>(L, [context, constraints]);
   };
 }
 

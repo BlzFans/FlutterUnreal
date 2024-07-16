@@ -154,12 +154,81 @@ void markNeedsBuild(BuildContext context) {
   (context as Element).markNeedsBuild();
 }
 
+typedef VoidPtr = ffi.Pointer<ffi.Void>;
+typedef Utf8Ptr = ffi.Pointer<Utf8>;
+typedef Int64Ptr = ffi.Pointer<ffi.Int64>;
+typedef Int32Ptr = ffi.Pointer<ffi.Int32>;
+
 @ffi.Native<ffi.Int64 Function(ffi.Int64, ffi.Int64)>()
 external int testDartCallCpp(int a, int b);
+
+double _gameViewPosX = 0;
+double _gameViewPosY = 0;
+double _gameViewWidth = 0;
+double _gameViewHeight = 0;
+
+StateSetter? _rebuildGameView;
+class GameView extends StatelessWidget {
+  GameView({
+      super.key,
+      required this.child,
+  });
+  
+  final Widget child;
+  
+  @override
+  Widget build(BuildContext context) {
+    return StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        _rebuildGameView = setState;
+      
+        if (_gameViewWidth == 0)
+        {
+          return child;
+        }
+        
+        double dpr = window.devicePixelRatio;
+        
+        Widget current = child;
+        //current = ColoredBox(color: Color(0x4000ff00), child: current);
+        current = SizedBox(width: _gameViewWidth / dpr, height: _gameViewHeight / dpr, child: current);
+        current = Positioned(left: _gameViewPosX / dpr, top: _gameViewPosY / dpr, child: current);
+        current = Stack(textDirection: TextDirection.ltr, children: <Widget>[current]);
+        //current = ColoredBox(color: Color(0x20ff0000), child: current);
+        
+        return current;
+      }
+    );
+  }
+}
+
+@ffi.Native<ffi.Void Function(Utf8Ptr name, ffi.Int64 address)>(symbol: 'setDartFunctionPtr')
+external void _setDartFunctionPtr(Utf8Ptr name, int address);
+void setDartFunctionPtr(String name, int address) {
+  final nameUtf8 = name.toNativeUtf8();
+  _setDartFunctionPtr(nameUtf8, address);
+  malloc.free(nameUtf8);
+}
+
+typedef Dart_OnGameViewportResize_Type = ffi.Void Function(ffi.Int32, ffi.Int32, ffi.Int32, ffi.Int32);
+void Dart_OnGameViewportResize(int x, int y, int width, int height)
+{
+  debugPrint("Dart_OnGameViewportResize ${x} ${y} ${width} ${height}");
+  _gameViewPosX = x.toDouble();
+  _gameViewPosY = y.toDouble();
+  _gameViewWidth = width.toDouble();
+  _gameViewHeight = height.toDouble();
+  _rebuildGameView?.call((){});
+}
 
 void initFlutterUnreal() {
   try {
     onHitTestResult = hitTestCallback;
+
+    int address;
+
+    address = ffi.Pointer.fromFunction<Dart_OnGameViewportResize_Type>(Dart_OnGameViewportResize).address;
+    setDartFunctionPtr('Dart_OnGameViewportResize', address);
 
     assert(
       () {

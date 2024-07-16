@@ -112,25 +112,27 @@ namespace flutter {
             context: context,
             barrierDismissible: false,
             builder(context) {
-                return AlertDialog({
-                    title: Column({
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                            Align({
-                                alignment: Alignment.topRight,
-                                child: IconButton({
-                                    icon: Icon(Icons.close, {size: 25}),
-                                    onPressed() {
-                                        Navigator.of(context).pop()
-                                    }
+                return BlockPointer({
+                    child: AlertDialog({
+                        title: Column({
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                                Align({
+                                    alignment: Alignment.topRight,
+                                    child: IconButton({
+                                        icon: Icon(Icons.close, {size: 25}),
+                                        onPressed() {
+                                            Navigator.of(context).pop()
+                                        }
+                                    })
+                                }),
+                                Center({
+                                    child: Text('Sign in')
                                 })
-                            }),
-                            Center({
-                                child: Text('Sign in')
-                            })
-                        ]
-                    }),
-                    content: loginContent()
+                            ]
+                        }),
+                        content: loginContent()
+                    })
                 })
             }
         })

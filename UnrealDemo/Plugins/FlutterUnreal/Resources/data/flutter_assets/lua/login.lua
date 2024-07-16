@@ -93,7 +93,7 @@ do
             context = context,
             barrierDismissible = false,
             builder = function(context)
-                return AlertDialog({
+                return BlockPointer({child = AlertDialog({
                     title = Column({
                         crossAxisAlignment = CrossAxisAlignment.stretch,
                         children = {
@@ -110,7 +110,7 @@ do
                         }
                     }),
                     content = loginContent()
-                })
+                })})
             end
         })
     end

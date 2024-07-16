@@ -35,6 +35,7 @@
 #include "Runtime/Engine/Classes/Engine/UserInterfaceSettings.h"
 #include "Interfaces/IPluginManager.h"
 #include "Slate/SceneViewport.h"
+#include "Widgets/SViewport.h"
 #include "FlutterUnreal.h"
 
 #include <vector>
@@ -47,6 +48,10 @@ FlutterEngineAOTData g_aotData = nullptr;
 float g_pixelRatio = 1.0f;
 int g_screenWidth = 0;
 int g_screenHeight = 0;
+
+FIntPoint g_gameViewPos;
+FIntPoint g_gameViewSize;
+
 bool g_keyEventHandled = false;
 std::string g_flutterDataPath;
 std::string g_luaPath;
@@ -78,23 +83,7 @@ FlutterVulkanImage VulkanGetNextImageCallback(void* user_data, const FlutterFram
 
 void* D3D11GetBackBuffer()
 {
-#if WITH_EDITOR
-    UGameViewportClient* GameViewport = GEngine->GameViewport;
-    if (GameViewport == nullptr)
-        return nullptr;
-
-    FSceneViewport* Viewport = GameViewport->GetGameViewport();
-    if (Viewport == nullptr)
-        return nullptr;
-
-    const FRHITexture2D* RenderTargetTexture = Viewport->GetRenderTargetTexture().GetReference();
-    if (RenderTargetTexture == nullptr)
-        return nullptr;
-
-    return RenderTargetTexture->GetNativeResource();
-#else
     return GFlutterUnrealModule->GetViewPortRHI()->GetNativeBackBufferTexture();
-#endif
 }
 
 void* D3D12GetBackBuffer()
@@ -352,21 +341,58 @@ static float getDpiScale()
 #endif
 }
 
+void(*Dart_OnGameViewportResize)(int x, int y, int width, int height);
+Dart2Cpp(Dart_OnGameViewportResize);
+
 void checkScreenResized()
 {
-    if (GEngine->GameViewport == nullptr)
+    UGameViewportClient* GameViewport = GEngine->GameViewport;
+    if (GameViewport == nullptr)
         return;
 
-    FVector2D viewportSize;
-    GEngine->GameViewport->GetViewportSize(viewportSize);
-
-    int w = viewportSize.X;
-    int h = viewportSize.Y;
-    if (g_screenWidth != w || g_screenHeight != h)
+    TSharedPtr<SViewport> GameViewportWidget = GameViewport->GetGameViewportWidget();
+    if (GameViewportWidget.IsValid())
     {
-        g_screenWidth = w;
-        g_screenHeight = h;
-        flutterEngineResize(w, h);
+        TSharedPtr<SWidget> RootWidget = GameViewportWidget;
+        while (RootWidget->GetParentWidget().IsValid())
+        {
+            RootWidget = RootWidget->GetParentWidget();
+        }
+
+        const FGeometry& RootGeometry = RootWidget->GetTickSpaceGeometry();
+        FVector2D ScreenSize = RootGeometry.GetAbsoluteSize();
+
+#if WITH_EDITOR
+        const FGeometry& ViewportGeometry = GameViewportWidget->GetTickSpaceGeometry();
+        FVector2D Position = ViewportGeometry.GetAbsolutePosition();
+        FVector2D Size = ViewportGeometry.GetAbsoluteSize();
+
+        Position = Position - RootGeometry.GetAbsolutePosition();
+
+        //FVector2D viewportSize;
+        //GameViewport->GetViewportSize(viewportSize);
+
+        FIntPoint gameViewPos((int)Position.X, (int)Position.Y);
+        FIntPoint gameViewSize((int)Size.X, (int)Size.Y);
+
+        if (Dart_OnGameViewportResize && (g_gameViewPos != gameViewPos || g_gameViewSize != gameViewSize))
+        {
+			g_gameViewPos = gameViewPos;
+			g_gameViewSize = gameViewSize;
+
+			UE_LOG(LogTemp, Warning, TEXT("%d %d %d %d"), gameViewPos.X, gameViewPos.Y, gameViewSize.X, gameViewSize.Y);
+
+            DartStateScope scope;
+			Dart_OnGameViewportResize(gameViewPos.X, gameViewPos.Y, gameViewSize.X, gameViewSize.Y);
+        }
+#endif
+
+        int w = ScreenSize.X;
+        int h = ScreenSize.Y;
+        if (g_screenWidth != w || g_screenHeight != h)
+        {
+            flutterEngineResize(w, h);
+        }
     }
 }
 
@@ -701,7 +727,6 @@ bool flutterMouseButtonEvent(int32_t x, int32_t y, bool down)
         else
         {
             event.phase = kDown;
-            s_isMouseDown = true;
         }
     }
     else
@@ -724,7 +749,13 @@ bool flutterMouseButtonEvent(int32_t x, int32_t y, bool down)
     event.timestamp = getTimeStamp();
 
     FlutterEngineSendPointerEvent(g_flutterEngine, &event, 1);
-    return FlutterEngineGetPointerEventHandled();
+    bool Handled = FlutterEngineGetPointerEventHandled();
+    if (Handled && down)
+    {
+        s_isMouseDown = true;
+    }
+
+    return Handled;
 }
 
 bool flutterMouseWheelEvent(int32_t x, int32_t y, int deltaX, int deltaY)

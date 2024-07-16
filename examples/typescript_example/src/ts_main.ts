@@ -12,7 +12,11 @@ namespace flutter {
             return CounterExample();
 
         if (name == '/next_gen_ui_demo' && nextGenAppMain)
-            return nextGenAppMain() 
+        {
+            let widget = nextGenAppMain()
+            widget = BlockPointer({child: widget})
+            return widget
+        }
 
         return SizedBox.shrink()
     }
@@ -46,7 +50,7 @@ namespace flutter {
             }
         })
         
-        runApp(widget)
+        runApp(GameView({child: widget}))
     }
 }
 

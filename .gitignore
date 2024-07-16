@@ -4,3 +4,13 @@ flutter_export_environment.sh
 Flutter-Generated.xcconfig
 /examples/typescript_example/node_modules
 /examples/typescript_example/package-lock.json
+/UnrealDemo/.vs
+/UnrealDemo/Binaries
+/UnrealDemo/Intermediate
+/UnrealDemo/Plugins/FlutterUnreal/Intermediate
+/UnrealDemo/Plugins/FlutterUnreal/Binaries
+/UnrealDemo/Saved
+/UnrealDemo/WindowsNoEditor
+/UnrealDemo/UnrealDemo.sln
+/UnrealDemo/Build
+/UnrealDemo/DerivedDataCache

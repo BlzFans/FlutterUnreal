@@ -40,8 +40,6 @@ protected:
 	void* FlutterEngineDLLHandle = nullptr;
 	FThreadSafeCounter FlutterEngineInitStage;
 
-	FDelegateHandle EndFrameHandle;
-
 	FViewportRHIRef ViewportRHI;
 };
 

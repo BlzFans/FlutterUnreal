@@ -45,13 +45,7 @@ void FFlutterUnrealModule::ShutdownModule()
 	CustomPresent.SafeRelease();
 	SharedWidget.Reset();
 
-#if WITH_EDITOR
-	if (EndFrameHandle.IsValid())
-	{
-		GEngine->GetPostRenderDelegate().Remove(EndFrameHandle);
-		EndFrameHandle.Reset();
-	}
-#else
+#if !WITH_EDITOR
 	if (FlutterEngineDLLHandle)
 	{
 		FPlatformProcess::FreeDllHandle(FlutterEngineDLLHandle);
@@ -101,46 +95,12 @@ void FFlutterUnrealModule::OnViewportCreated()
 	AddWidgetToViewport(GEngine->GameViewport);
 	RegisterTick();
 
-#if WITH_EDITOR
-	if (g_flutterRendererType == kD3D11)
-	{
-		//https://docs.unrealengine.com/4.27/en-US/ProgrammingAndScripting/Rendering/ParallelRendering/
-		/*IConsoleVariable* CVarRHIThreadEnable = IConsoleManager::Get().FindConsoleVariable(TEXT("r.RHIThread.Enable"), false);
-		if (CVarRHIThreadEnable && CVarRHIThreadEnable->GetInt() != 0)
-		{
-			CVarRHIThreadEnable->Set(0);
-		}*/
-
-		if (IsRunningRHIInSeparateThread())
-		{
-			SetRHIThreadEnabled(false, false);
-		}
-
-		IConsoleVariable* CVarRHICmdBypass = IConsoleManager::Get().FindConsoleVariable(TEXT("r.RHICmdBypass"), false);
-		if (CVarRHICmdBypass && CVarRHICmdBypass->GetInt() != 1)
-		{
-			CVarRHICmdBypass->Set(1);
-		}
-		EndFrameHandle = GEngine->GetPostRenderDelegate().AddRaw(this, &FFlutterUnrealModule::EndFrame); //run in RenderThread
-	}
-	else
-	{
-		StartCustomPresent(GEngine->GameViewport); //run in RHIThread
-	}
-#else
 	StartCustomPresent(GEngine->GameViewport); //run in RHIThread
-#endif
 }
 
 #if WITH_EDITOR
 void FFlutterUnrealModule::HandleEndPIE(const bool InIsSimulating)
 {
-	if (EndFrameHandle.IsValid())
-	{
-		GEngine->GetPostRenderDelegate().Remove(EndFrameHandle);
-		EndFrameHandle.Reset();
-	}
-
 	if (SharedWidget.IsValid())
 	{
 		auto& WidgetGameViewport = SharedWidget->GetGameViewport();

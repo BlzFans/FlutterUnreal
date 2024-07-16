@@ -46,6 +46,7 @@ callbackFunctions =
     ["MaterialPropertyResolver<Color>"] = {"_getMaterialPropertyResolverT<Color>", "(states: MaterialState[]) => Color"},
     ["MaterialPropertyResolver<BorderSide>"] = {"_getMaterialPropertyResolverT<BorderSide>", "(states: MaterialState[]) => BorderSide"},
     NullableIndexedWidgetBuilder = {"_getNullableIndexedWidgetBuilder", "(context:BuildContext, index:int) => Widget"},
+    LayoutWidgetBuilder = {"_getLayoutWidgetBuilder", "(context:BuildContext, constraints:BoxConstraints) => Widget"},
 }
 
 class "Object"
@@ -608,7 +609,23 @@ class "BoxConstraints" {
     "BoxConstraints.loose(Size size)",
     "BoxConstraints.tight(Size size)",
     "BoxConstraints.tightFor({double? width, double? height})",
-    "BoxConstraints.tightForFinite({double width = double.infinity, double height = double.infinity})"
+    "BoxConstraints.tightForFinite({double width = double.infinity, double height = double.infinity})",
+    
+    "biggest → Size",
+    "flipped → BoxConstraints",
+    "hasBoundedHeight → bool",
+    "hasBoundedWidth → bool",
+    "hasInfiniteHeight → bool",
+    "hasInfiniteWidth → bool",
+    "hasTightHeight → bool",
+    "hasTightWidth → bool",
+    "isNormalized → bool",
+    "isTight → bool",
+    "maxHeight → double",
+    "maxWidth → double",
+    "minHeight → double",
+    "minWidth → double",
+    "smallest → Size",
 }
 
 class "ConstrainedBox" {
@@ -1194,6 +1211,14 @@ class "TabController" {
 
 class "DefaultTabController" {
     "DefaultTabController({Key? key, required int length, int initialIndex = 0, required Widget child, Duration? animationDuration})",
+}
+
+class "LayoutBuilder" {
+    "LayoutBuilder({Key? key, required LayoutWidgetBuilder builder})",
+}
+
+class "GameView" {
+    "GameView({Key? key, required Widget child})"
 }
 
 enum "FontStyle" {

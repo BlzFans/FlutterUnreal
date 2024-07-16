@@ -49,7 +49,7 @@ FReply SFlutterWidget::OnAnalogValueChanged(const FGeometry& MyGeometry, const F
 	return ToReply(false);
 }
 
-FVector2D getMousePos(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+FVector2D getMousePos(SWidget* Widget, const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
 	const FVector2D GeometrySize = MyGeometry.GetLocalSize();
 	if (GeometrySize.X == 0.f || GeometrySize.Y == 0.f)
@@ -57,16 +57,26 @@ FVector2D getMousePos(const FGeometry& MyGeometry, const FPointerEvent& MouseEve
 		return { 0, 0 };
 	}
 
-	FVector2D LocalPosition = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+	FVector2D Position = MouseEvent.GetScreenSpacePosition();
+	FVector2D Origin = MyGeometry.GetAbsolutePosition();
 
-	extern int g_screenWidth;
-	extern int g_screenHeight;
-	return { LocalPosition.X / GeometrySize.X * g_screenWidth, LocalPosition.Y / GeometrySize.Y * g_screenHeight };
+#if WITH_EDITOR
+	SWidget* RootWidget = Widget;
+	while (RootWidget->GetParentWidget().IsValid())
+	{
+		RootWidget = RootWidget->GetParentWidget().Get();
+	}
+
+	Origin = RootWidget->GetTickSpaceGeometry().GetAbsolutePosition();
+#endif
+
+	Position = Position - Origin;
+	return Position;
 }
 
 FReply SFlutterWidget::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	FVector2D pos = getMousePos(MyGeometry, MouseEvent);
+	FVector2D pos = getMousePos(this, MyGeometry, MouseEvent);
 	//UE_LOG(LogTemp, Warning, TEXT("OnMouseButtonDown %d %d"), (int)pos.X, (int)pos.Y);
 
 	bool bConsume = flutterMouseButtonEvent((int)pos.X, (int)pos.Y, true);
@@ -80,7 +90,7 @@ FReply SFlutterWidget::OnMouseButtonDoubleClick(const FGeometry& MyGeometry, con
 
 FReply SFlutterWidget::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	FVector2D pos = getMousePos(MyGeometry, MouseEvent);
+	FVector2D pos = getMousePos(this, MyGeometry, MouseEvent);
 	//UE_LOG(LogTemp, Warning, TEXT("OnMouseButtonUp %d %d"), (int)pos.X, (int)pos.Y);
 
 	bool bConsume = flutterMouseButtonEvent((int)pos.X, (int)pos.Y, false);
@@ -89,14 +99,14 @@ FReply SFlutterWidget::OnMouseButtonUp(const FGeometry& MyGeometry, const FPoint
 
 FReply SFlutterWidget::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	FVector2D pos = getMousePos(MyGeometry, MouseEvent);
+	FVector2D pos = getMousePos(this, MyGeometry, MouseEvent);
 	bool bConsume = flutterMouseWheelEvent((int)pos.X, (int)pos.Y, 0, -MouseEvent.GetWheelDelta() * 10.0f);
 	return ToReply(bConsume);
 }
 
 FReply SFlutterWidget::OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	FVector2D pos = getMousePos(MyGeometry, MouseEvent);
+	FVector2D pos = getMousePos(this, MyGeometry, MouseEvent);
 	bool bConsume = flutterMouseMoveEvent((int)pos.X, (int)pos.Y);
 	return ToReply(bConsume);
 }

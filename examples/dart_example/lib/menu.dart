@@ -21,97 +21,101 @@ class _MenuPageState extends State<MenuPage> {
   FractionalOffset? alignment;
 
   @override
-  Widget build(BuildContext context) {
-      final ThemeData theme = Theme.of(context);
-      final colorScheme = theme.colorScheme;
-      late Widget widget;
+  Widget build(BuildContext context) {      
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final ThemeData theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        late Widget widget;
       
-      widget = Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 16),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: TextButton(
-              onPressed: () {
-                _gotoPage("/counter_example");
-              },
-              child: const Text("Counter Example")
-            )
-          ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: TextButton(
-              onPressed: () {
-                showLoginDialog(context);
-              },
-              child: const Text("Login Dialog")
-            )
-          ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: TextButton(
-              onPressed: () {
-                _gotoPage("/next_gen_ui_demo");
-              },
-              child: const Text("Next Generation UI Demo")
-            )
-          ),
-        ]
-      );
-      
-      var media = MediaQuery.of(context);
-      var size = const Size(250, 300);
-      position ??= aligmentToPosition(media.size, size, FractionalOffset.center);
-
-      widget = Container(
-        width: size.width,
-        height: size.height,
-        padding: const EdgeInsets.only(left: 5, right: 5, top: 5, bottom: 5),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: colorScheme.background.withOpacity(0.3),
-        ),
-        child: widget
-      );
-
-      widget = BlockPointer(child: widget);
-
-      var useAlignment = true;
-      if (useAlignment) {
-        alignment ??= positionToAlignment(media.size, size, position!);
-        widget = Align(
-          alignment: alignment!,
-          child: GestureDetector(
-            onPanUpdate: (DragUpdateDetails e) {
-              var pos = aligmentToPosition(media.size, size, alignment!);
-              pos += e.delta;
-              alignment = positionToAlignment(media.size, size, pos);
-
-              setState(() {});
-            },
-            child: widget
-          )
-        );
-      } else {
-        widget = Stack (
-          children:[
-            Positioned(
-              left: position!.dx,
-              top: position!.dy,
-              child: GestureDetector(
-                onPanUpdate: (DragUpdateDetails e) {
-                  position = position! + e.delta;
-                  setState(() {});
+        widget = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: double.infinity),
+              child: TextButton(
+                onPressed: () {
+                  _gotoPage("/counter_example");
                 },
-                child: widget
+                child: const Text("Counter Example")
               )
-            )
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: double.infinity),
+              child: TextButton(
+                onPressed: () {
+                  showLoginDialog(context);
+                },
+                child: const Text("Login Dialog")
+              )
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: double.infinity),
+              child: TextButton(
+                onPressed: () {
+                  _gotoPage("/next_gen_ui_demo");
+                },
+                child: const Text("Next Generation UI Demo")
+              )
+            ),
           ]
         );
-      }
+        
+        var parentSize = Size(constraints.maxWidth, constraints.maxHeight);
+        var size = const Size(250, 300);
+        position ??= aligmentToPosition(parentSize, size, FractionalOffset.center);
 
-      return widget;
+        widget = Container(
+          width: size.width,
+          height: size.height,
+          padding: const EdgeInsets.only(left: 5, right: 5, top: 5, bottom: 5),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: colorScheme.background.withOpacity(0.3),
+          ),
+          child: widget
+        );
+
+        widget = BlockPointer(child: widget);
+
+        var useAlignment = true;
+        if (useAlignment) {
+          alignment ??= positionToAlignment(parentSize, size, position!);
+          widget = Align(
+            alignment: alignment!,
+            child: GestureDetector(
+              onPanUpdate: (DragUpdateDetails e) {
+                var pos = aligmentToPosition(parentSize, size, alignment!);
+                pos += e.delta;
+                alignment = positionToAlignment(parentSize, size, pos);
+
+                setState(() {});
+              },
+              child: widget
+            )
+          );
+        } else {
+          widget = Stack (
+            children:[
+              Positioned(
+                left: position!.dx,
+                top: position!.dy,
+                child: GestureDetector(
+                  onPanUpdate: (DragUpdateDetails e) {
+                    position = position! + e.delta;
+                    setState(() {});
+                  },
+                  child: widget
+                )
+              )
+            ]
+          );
+        }
+
+        return widget;
+      }
+    );
   }
 
   FractionalOffset positionToAlignment(Size size, Size childSize, Offset pos) {

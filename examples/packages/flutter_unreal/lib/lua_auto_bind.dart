@@ -4986,6 +4986,37 @@ int _Size_square(VoidPtr L) {
   }
 }
 
+int _BoxConstraints_getProp_(VoidPtr L) {
+  var propName = Symbol(luaL_checkstring(L, 2).toDartString());
+
+  var object = luaToObjectT<BoxConstraints>(L, 1);
+  if (object == null) {
+    lua_pushnil(L);
+    return 1;
+  }
+
+  switch(propName) {
+    case #biggest: return luaPush(L, object.biggest);
+    case #flipped: return luaPush(L, object.flipped);
+    case #hasBoundedHeight: return luaPush(L, object.hasBoundedHeight);
+    case #hasBoundedWidth: return luaPush(L, object.hasBoundedWidth);
+    case #hasInfiniteHeight: return luaPush(L, object.hasInfiniteHeight);
+    case #hasInfiniteWidth: return luaPush(L, object.hasInfiniteWidth);
+    case #hasTightHeight: return luaPush(L, object.hasTightHeight);
+    case #hasTightWidth: return luaPush(L, object.hasTightWidth);
+    case #isNormalized: return luaPush(L, object.isNormalized);
+    case #isTight: return luaPush(L, object.isTight);
+    case #maxHeight: return luaPush(L, object.maxHeight);
+    case #maxWidth: return luaPush(L, object.maxWidth);
+    case #minHeight: return luaPush(L, object.minHeight);
+    case #minWidth: return luaPush(L, object.minWidth);
+    case #smallest: return luaPush(L, object.smallest);
+  }
+
+  lua_pushnil(L);
+  return 1;
+}
+
 int _BoxConstraints_BoxConstraints(VoidPtr L) {
   try {
 
@@ -10576,6 +10607,48 @@ int _DefaultTabController_DefaultTabController(VoidPtr L) {
   }
 }
 
+int _LayoutBuilder_LayoutBuilder(VoidPtr L) {
+  try {
+
+    assert(lua_type(L, 1) == LUA_TTABLE);
+
+    int top_ = lua_gettop(L); assert(top_ >= 0);
+
+    Key? key = _getNamedParam<Key>(L, top_, 'key');
+
+    LayoutWidgetBuilder? builder = _getLayoutWidgetBuilder(L, top_, 'builder')!;
+
+    var result_ = LayoutBuilder(key: key, builder: builder);
+
+    return luaPush(L, result_);
+
+  } catch (e, stacktrace) {
+    luaL_error(L, '$e\n$stacktrace');
+    return 0;
+  }
+}
+
+int _GameView_GameView(VoidPtr L) {
+  try {
+
+    assert(lua_type(L, 1) == LUA_TTABLE);
+
+    int top_ = lua_gettop(L); assert(top_ >= 0);
+
+    Key? key = _getNamedParam<Key>(L, top_, 'key');
+
+    Widget? child = _getNamedParam<Widget>(L, top_, 'child')!;
+
+    var result_ = GameView(key: key, child: child);
+
+    return luaPush(L, result_);
+
+  } catch (e, stacktrace) {
+    luaL_error(L, '$e\n$stacktrace');
+    return 0;
+  }
+}
+
 int _runApp(VoidPtr L) {
   try {
 
@@ -11184,7 +11257,10 @@ void _autoBind(VoidPtr L) {
   address = ffi.Pointer.fromFunction<lua_CFunction>(_Size_square, exceptionalReturn).address;
   luaRegisterMethod(L, 'Size', 'square', address);
 
-  luaRegisterClass(L, 'BoxConstraints', '', 0, 0);
+  addressGet = 0;
+  addressSet = 0;
+  addressGet = ffi.Pointer.fromFunction<lua_CFunction>(_BoxConstraints_getProp_, exceptionalReturn).address;
+  luaRegisterClass(L, 'BoxConstraints', '', addressGet, addressSet);
   address = ffi.Pointer.fromFunction<lua_CFunction>(_BoxConstraints_BoxConstraints, exceptionalReturn).address;
   luaRegisterMethod(L, 'BoxConstraints', '__call', address);
   address = ffi.Pointer.fromFunction<lua_CFunction>(_BoxConstraints_expand, exceptionalReturn).address;
@@ -11758,6 +11834,14 @@ void _autoBind(VoidPtr L) {
   luaRegisterClass(L, 'DefaultTabController', '', 0, 0);
   address = ffi.Pointer.fromFunction<lua_CFunction>(_DefaultTabController_DefaultTabController, exceptionalReturn).address;
   luaRegisterMethod(L, 'DefaultTabController', '__call', address);
+
+  luaRegisterClass(L, 'LayoutBuilder', '', 0, 0);
+  address = ffi.Pointer.fromFunction<lua_CFunction>(_LayoutBuilder_LayoutBuilder, exceptionalReturn).address;
+  luaRegisterMethod(L, 'LayoutBuilder', '__call', address);
+
+  luaRegisterClass(L, 'GameView', '', 0, 0);
+  address = ffi.Pointer.fromFunction<lua_CFunction>(_GameView_GameView, exceptionalReturn).address;
+  luaRegisterMethod(L, 'GameView', '__call', address);
 
   address = ffi.Pointer.fromFunction<lua_CFunction>(_runApp, exceptionalReturn).address;
   luaRegisterFunction(L, 'runApp', address);

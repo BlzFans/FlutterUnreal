@@ -8,7 +8,7 @@ import 'package:next_gen_ui_demo/main.dart';
 
 void main() {
   initFlutterUnreal();
-  runApp(const App());
+  runApp(GameView(child: const App()));
 }
 
 class App extends StatelessWidget {
@@ -22,6 +22,7 @@ class App extends StatelessWidget {
       widget = const CounterExample();
     } else if (settings.name == "/next_gen_ui_demo") {
       widget = nextGenAppMain();
+      widget = BlockPointer(child: widget);
     } else {
       widget = const SizedBox.shrink();
     }

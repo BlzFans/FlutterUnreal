@@ -117,25 +117,27 @@ void showLoginDialog(BuildContext context) {
     context: context,
     barrierDismissible: false,
     builder: (BuildContext context) {
-      return AlertDialog(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-                alignment: Alignment.topRight,
-                child: IconButton(
+      return BlockPointer(
+        child: AlertDialog(
+          title: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
                     icon: const Icon(Icons.close, size: 25),
                     onPressed: () {
                       Navigator.of(context).pop();
                     }
+                  )
+                ),
+                const Center(
+                  child: Text('Sign in')
                 )
-            ),
-            const Center(
-                child: Text('Sign in')
-            )
-          ]
-        ),
-        content: loginContent()
+              ]
+          ),
+          content: loginContent()
+        )
       );
     }
   );
