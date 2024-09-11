@@ -2,6 +2,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include "ThirdParty/flutter_engine/flutter_embedder.h"
 
 class PlatformHandlerPlugin {
 public:

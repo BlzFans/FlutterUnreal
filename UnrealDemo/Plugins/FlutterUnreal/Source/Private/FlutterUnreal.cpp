@@ -205,7 +205,7 @@ void FFlutterUnrealModule::InitFlutterEngine_RenderThread()
 		FlutterEngineInitStage.Increment();
 		FlutterEngineInitRenderLoop(
 			[](void*) -> bool {
-				if (!GRenderingThread)
+				if (!GIsThreadedRendering)
 					return false;
 
 				return IsInRenderingThread() || IsInRHIThread();

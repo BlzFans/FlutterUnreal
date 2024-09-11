@@ -1,9 +1,9 @@
 # FlutterUnreal
 Flutter + Unreal, Integrate Flutter into Unreal Engine
 
-Build Unreal game UI with Dart, Lua or Typescript
+Build Unreal game UIs with Dart, Lua or Typescript
 
-Supports D3D11, D3D12 and Vulkan on Windows(UE4.26, UE4.27); Android and iOS are in the works.
+Supports D3D11, D3D12 and Vulkan on Windows(UE4.26, UE4.27, UE5.3, UE5.4); Android and iOS support is in the works.
 
 ![](screenshots/img1.jpg)
 

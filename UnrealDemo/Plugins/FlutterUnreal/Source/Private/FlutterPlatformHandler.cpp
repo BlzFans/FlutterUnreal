@@ -1,7 +1,6 @@
 
 #include "FlutterPlatformHandler.h"
-#include "GenericPlatform/GenericPlatformMisc.h"
-#include "ThirdParty/flutter_engine/flutter_embedder.h"
+#include "HAL/PlatformApplicationMisc.h"
 #include "FlutterMessage.h"
 
 #define RAPIDJSON_HAS_STDSTRING 1
@@ -74,7 +73,7 @@ void PlatformHandlerPlugin::HandleMessage(const FlutterPlatformMessage* message)
         }
 
         FString data;
-        FGenericPlatformMisc::ClipboardPaste(data);
+        FPlatformApplicationMisc::ClipboardPaste(data);
 
         rapidjson::Document doc;
         doc.SetObject();
@@ -100,7 +99,7 @@ void PlatformHandlerPlugin::HandleMessage(const FlutterPlatformMessage* message)
         }
 
         FString data;
-        FGenericPlatformMisc::ClipboardPaste(data);
+        FPlatformApplicationMisc::ClipboardPaste(data);
 
         rapidjson::Document doc;
         doc.SetObject();
@@ -120,7 +119,7 @@ void PlatformHandlerPlugin::HandleMessage(const FlutterPlatformMessage* message)
         }
 
         FString data(itr->value.GetString());
-        FGenericPlatformMisc::ClipboardCopy(*data);
+        FPlatformApplicationMisc::ClipboardCopy(*data);
 
         sendSuccessResponse(message, nullptr);
         return;

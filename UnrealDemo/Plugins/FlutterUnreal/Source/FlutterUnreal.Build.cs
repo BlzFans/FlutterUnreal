@@ -38,6 +38,9 @@ public class FlutterUnreal : ModuleRules
 				"CoreUObject",
 				"Engine",
                 "RHI",
+#if UE_5_0_OR_LATER
+				"RHICore",
+#endif
                 "RenderCore",
                 "Slate",
 				"SlateCore",
@@ -61,6 +64,9 @@ public class FlutterUnreal : ModuleRules
 
 					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/D3D12RHI/Private")),
 					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/D3D12RHI/Private/Windows")),
+#if UE_5_0_OR_LATER
+					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/RHICore/Internal")),
+#endif
 				}
 			);
             PrivateIncludePaths.AddRange(
@@ -83,6 +89,13 @@ public class FlutterUnreal : ModuleRules
             RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/app.so"), StagedFileType.NonUFS);
             RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/icudtl.dat"), StagedFileType.NonUFS);
 			RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/flutter_assets/..."), StagedFileType.NonUFS);
+            
+            PublicDefinitions.Add("RHICORE_PLATFORM_DXGI_H=<dxgi.h>");
+            PublicDefinitions.Add("WITH_NVAPI=0");
+            PublicDefinitions.Add("NV_AFTERMATH=0");
+            PublicDefinitions.Add("INTEL_EXTENSIONS=0");
+			PublicDefinitions.Add("INTEL_METRICSDISCOVERY=0");
+            PublicDefinitions.Add("__INTEL_COMPILER=0");
 
 #if UE_4_27_OR_LATER
             bEnableUndefinedIdentifierWarnings = false;

@@ -10,7 +10,9 @@ do
             return flutter.CounterExample()
         end
         if name == "/next_gen_ui_demo" and nextGenAppMain then
-            return nextGenAppMain()
+            local widget = nextGenAppMain()
+            widget = BlockPointer({child = widget})
+            return widget
         end
         return SizedBox.shrink()
     end
@@ -31,7 +33,7 @@ do
                 onGenerateRoute = onGenerateRoute
             })
         end})
-        runApp(widget)
+        runApp(GameView({child = widget}))
     end
 end
 function gotoPage(routeName)

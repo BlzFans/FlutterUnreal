@@ -59,7 +59,7 @@ std::string g_luaPath;
 #if PLATFORM_WINDOWS || PLATFORM_ANDROID
 void* VulkanGetInstanceProcAddressCallback(void* user_data, FlutterVulkanInstanceHandle instance, const char* procname)
 {
-    auto* proc = vkGetInstanceProcAddr(reinterpret_cast<VkInstance>(instance), procname);
+    auto* proc = VulkanDynamicAPI::vkGetInstanceProcAddr(reinterpret_cast<VkInstance>(instance), procname);
     return reinterpret_cast<void*>(proc);
 }
 
@@ -287,14 +287,19 @@ FlutterRendererConfig flutterGetRenderConfig()
     }
     else if (g_flutterRendererType == kD3D12)
     {
-        FD3D12DynamicRHI* DynamicRHI = FD3D12DynamicRHI::GetD3DRHI();
+        FD3D12DynamicRHI* DynamicRHI = (FD3D12DynamicRHI*) GDynamicRHI;
 
         config.type = kD3D12;
         config.d3d12.struct_size = sizeof(config.d3d12);
 
         config.d3d12.adapter = DynamicRHI->GetAdapter().GetAdapter();
         config.d3d12.device = DynamicRHI->GetAdapter().GetD3DDevice();
+        
+#if ENGINE_MAJOR_VERSION == 5
+        config.d3d12.commandQueue = GDynamicRHI->RHIGetNativeGraphicsQueue();
+#else
         config.d3d12.commandQueue = DynamicRHI->RHIGetD3DCommandQueue();
+#endif
 
         config.d3d12.getBackBuffer = D3D12GetBackBuffer;
         config.d3d12.present = D3D12PresentCallback;
