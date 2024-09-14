@@ -1,5 +1,6 @@
 
 #pragma once
+#include "ThirdParty/flutter_engine/flutter_embedder.h"
 
 void MessageCallback(const FlutterPlatformMessage* message, void* userData);
 void sendErrorResponse(const FlutterPlatformMessage* message, const char* error_code, const char* error_message);

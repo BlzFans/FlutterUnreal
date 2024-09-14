@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include "ThirdParty/flutter_engine/flutter_embedder.h"
 
 // A directional range of text.
 //
