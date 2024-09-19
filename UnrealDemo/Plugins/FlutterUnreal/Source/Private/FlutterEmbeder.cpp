@@ -81,14 +81,43 @@ FlutterVulkanImage VulkanGetNextImageCallback(void* user_data, const FlutterFram
 
 #if PLATFORM_WINDOWS
 
+class MyD3D11DynamicRHI : public FD3D11DynamicRHI
+{
+public:
+    FD3D11Viewport* GetDrawingViewport()
+    {
+        return DrawingViewport.GetReference();
+    }
+};
+
+void OnBeginDrawing()
+{
+    if (g_flutterRendererType == kD3D11)
+    {
+        MyD3D11DynamicRHI* DynamicRHI = static_cast<MyD3D11DynamicRHI*>(GDynamicRHI);
+        FD3D11Viewport* Viewport = DynamicRHI->GetDrawingViewport();
+        GFlutterUnrealModule->SetRHIViewport(Viewport);
+    }
+    else if(g_flutterRendererType == kD3D12)
+    {
+        FD3D12DynamicRHI* DynamicRHI = (FD3D12DynamicRHI*)GDynamicRHI;
+        FD3D12Viewport* Viewport = DynamicRHI->GetAdapter().GetDrawingViewport();
+        GFlutterUnrealModule->SetRHIViewport(Viewport);
+    }
+}
+
 void* D3D11GetBackBuffer()
 {
-    return GFlutterUnrealModule->GetViewPortRHI()->GetNativeBackBufferTexture();
+    FRHIViewport* RHIViewport = GFlutterUnrealModule->GetRHIViewport();
+    void* BackBuffer = RHIViewport->GetNativeBackBufferTexture();
+    return BackBuffer;
 }
 
 void* D3D12GetBackBuffer()
 {
-    return ((FD3D12Resource*)GFlutterUnrealModule->GetViewPortRHI()->GetNativeBackBufferTexture())->GetResource();
+    FRHIViewport* RHIViewport = GFlutterUnrealModule->GetRHIViewport();
+    void* BackBuffer = ((FD3D12Resource*)RHIViewport->GetNativeBackBufferTexture())->GetResource();
+    return BackBuffer;
 }
 
 #endif

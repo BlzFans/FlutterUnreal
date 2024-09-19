@@ -13,8 +13,6 @@ public:
 	virtual void ShutdownModule() override;
 
 	void OnViewportCreated();
-
-	void AddWidgetToViewport(UGameViewportClient* GameViewport);
 	void StartCustomPresent(UGameViewportClient* GameViewport);
 
 	void EndFrame();
@@ -24,7 +22,8 @@ public:
 
 	void HandleEndPIE(const bool InIsSimulating);
 
-	FRHIViewport* GetViewPortRHI();
+	FRHIViewport* GetRHIViewport() const;
+	void SetRHIViewport(FRHIViewport* Viewport);
 
 protected:
 	FDelegateHandle ViewportCreatedHandle;
@@ -34,18 +33,23 @@ protected:
 	void UnregisterTick();
 	void Tick(float DeltaSeconds);
 
-	TSharedPtr<class SFlutterWidget> SharedWidget;
 	FCustomPresentRHIRef CustomPresent;
+	FRHIViewport* RHIViewport = nullptr;
 
 	void* FlutterEngineDLLHandle = nullptr;
 	FThreadSafeCounter FlutterEngineInitStage;
 
-	FViewportRHIRef ViewportRHI;
+	TSharedPtr<IInputProcessor> InputProcessor;
 };
 
-extern FFlutterUnrealModule* GFlutterUnrealModule;
-
-inline FRHIViewport* FFlutterUnrealModule::GetViewPortRHI()
+inline FRHIViewport* FFlutterUnrealModule::GetRHIViewport() const
 {
-	return ViewportRHI.GetReference();
+	return RHIViewport;
 }
+
+inline void FFlutterUnrealModule::SetRHIViewport(FRHIViewport* Viewport)
+{
+	RHIViewport = Viewport;
+}
+
+extern FFlutterUnrealModule* GFlutterUnrealModule;

@@ -1,7 +1,7 @@
 
 #include "FlutterUnreal.h"
 #include "FlutterUnrealCustomPresent.h"
-#include "SFlutterWidget.h"
+#include "FlutterInput.h"
 #include "FlutterEmbeder.h"
 #include "ThirdParty/flutter_engine/flutter_embedder.h"
 
@@ -17,6 +17,7 @@
 
 #include "Interfaces/IPluginManager.h"
 #include "Async/Async.h"
+#include "Slate/SceneViewport.h"
 
 #define LOCTEXT_NAMESPACE "FFlutterUnrealModule"
 
@@ -41,9 +42,7 @@ void FFlutterUnrealModule::ShutdownModule()
 		ViewportCreatedHandle.Reset();
 	}
 
-	ViewportRHI.SafeRelease();
 	CustomPresent.SafeRelease();
-	SharedWidget.Reset();
 
 #if !WITH_EDITOR
 	if (FlutterEngineDLLHandle)
@@ -55,6 +54,16 @@ void FFlutterUnrealModule::ShutdownModule()
 
 	UnregisterTick();
 	GFlutterUnrealModule = nullptr;
+
+	if (InputProcessor.IsValid())
+	{
+		if (FSlateApplication::IsInitialized())
+		{
+			FSlateApplication::Get().UnregisterInputPreProcessor(InputProcessor);
+		}
+
+		InputProcessor.Reset();
+	}
 }
 
 void FFlutterUnrealModule::OnViewportCreated()
@@ -92,8 +101,13 @@ void FFlutterUnrealModule::OnViewportCreated()
 		FlutterEngineDLLHandle = FPlatformProcess::GetDllHandle(*DLLPath);
 	}
 
-	AddWidgetToViewport(GEngine->GameViewport);
 	RegisterTick();
+
+	if (!InputProcessor.IsValid())
+	{
+		InputProcessor = MakeShareable(new FFluterInputProcessor);
+		FSlateApplication::Get().RegisterInputPreProcessor(InputProcessor);
+	}
 
 	StartCustomPresent(GEngine->GameViewport); //run in RHIThread
 }
@@ -101,15 +115,6 @@ void FFlutterUnrealModule::OnViewportCreated()
 #if WITH_EDITOR
 void FFlutterUnrealModule::HandleEndPIE(const bool InIsSimulating)
 {
-	if (SharedWidget.IsValid())
-	{
-		auto& WidgetGameViewport = SharedWidget->GetGameViewport();
-		if (WidgetGameViewport.IsValid())
-		{
-			WidgetGameViewport->RemoveViewportWidgetContent(SharedWidget.ToSharedRef());
-		}
-	}
-
 	UnregisterTick();
 }
 #endif
@@ -133,19 +138,8 @@ void FFlutterUnrealModule::StartCustomPresent(UGameViewportClient* GameViewport)
 			UE_LOG(LogTemp, Warning, TEXT("FlutterUnreal StartCustomPresent"));
 			CustomPresent = new FFlutterUnrealCustomPresent();
 			viewport_rhi->GetReference()->SetCustomPresent(CustomPresent);
-
-			if (g_flutterRendererType == kD3D11 || g_flutterRendererType == kD3D12)
-			{
-				ViewportRHI = *viewport_rhi;
-			}
 		}
 	}
-}
-
-void FFlutterUnrealModule::AddWidgetToViewport(UGameViewportClient* GameViewport)
-{
-	SAssignNew(SharedWidget, SFlutterWidget).GameViewport(GameViewport);
-	GameViewport->AddViewportWidgetContent(SharedWidget.ToSharedRef(), 10000);
 }
 
 void FFlutterUnrealModule::RegisterTick()

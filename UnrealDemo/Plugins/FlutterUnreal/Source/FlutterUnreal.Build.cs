@@ -80,6 +80,19 @@ public class FlutterUnreal : ModuleRules
             AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
             AddEngineThirdPartyPrivateStaticDependencies(Target, "Vulkan");
             AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenGL");
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelExtensionsFramework");
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAPI");
+
+#if !UE_5_0_OR_LATER
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "HLMediaLibrary");
+#endif
+
+#if !UE_5_4_OR_LATER
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelMetricsDiscovery");
+#endif
+
+			PrivateDefinitions.Add("__INTEL_COMPILER=0");
 
             PublicDelayLoadDLLs.Add("flutter_engine.dll");
 
@@ -89,18 +102,9 @@ public class FlutterUnreal : ModuleRules
             RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/app.so"), StagedFileType.NonUFS);
             RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/icudtl.dat"), StagedFileType.NonUFS);
 			RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/flutter_assets/..."), StagedFileType.NonUFS);
-            
-            PublicDefinitions.Add("RHICORE_PLATFORM_DXGI_H=<dxgi.h>");
-            PublicDefinitions.Add("WITH_NVAPI=0");
-            PublicDefinitions.Add("NV_AFTERMATH=0");
-            PublicDefinitions.Add("INTEL_EXTENSIONS=0");
-			PublicDefinitions.Add("INTEL_METRICSDISCOVERY=0");
-            PublicDefinitions.Add("__INTEL_COMPILER=0");
 
-#if UE_4_27_OR_LATER
-            bEnableUndefinedIdentifierWarnings = false;
-#endif
-        }
+			bEnableUndefinedIdentifierWarnings = false;
+		}
 		else if (Target.Platform == UnrealTargetPlatform.Android)
 		{
             PrivateDependencyModuleNames.Add("VulkanRHI");

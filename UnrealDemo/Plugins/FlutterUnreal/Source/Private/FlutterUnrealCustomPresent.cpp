@@ -3,6 +3,14 @@
 #include "FlutterUnreal.h"
 #include "FlutterEmbeder.h"
 
+void FFlutterUnrealCustomPresent::BeginDrawing()
+{
+#if PLATFORM_WINDOWS
+	extern void OnBeginDrawing();
+	OnBeginDrawing();
+#endif
+}
+
 bool FFlutterUnrealCustomPresent::Present(int32& InOutSyncInterval)
 {
 #if PLATFORM_WINDOWS || PLATFORM_ANDROID
@@ -34,4 +42,8 @@ void FFlutterUnrealCustomPresent::PostPresent()
 		mSwapchain = nullptr;
 	}
 #endif 
+
+#if PLATFORM_WINDOWS
+	GFlutterUnrealModule->SetRHIViewport(nullptr);
+#endif
 }

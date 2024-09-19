@@ -16,6 +16,7 @@ public:
 		return true;
 	}
 
+	virtual void BeginDrawing() override;
 	virtual bool Present(int32& InOutSyncInterval) override;
 	virtual void PostPresent() override;
 
