@@ -1,7 +1,10 @@
 
 #include "FlutterEmbeder.h"
 
+#if FLUTTERUNREAL_WITH_LUA
 #include "FlutterLua.h"
+#endif
+
 #include "FlutterTextInput.h"
 #include "FlutterKeyboard.h"
 
@@ -451,7 +454,9 @@ void flutterEngineInit(const char* command_line)
     if (g_flutterEngine)
         return;
 
+#if FLUTTERUNREAL_WITH_LUA
     initLua();
+#endif
 
     FlutterCustomTaskRunners task_runners = {};
     task_runners.struct_size = sizeof(FlutterCustomTaskRunners);
@@ -560,7 +565,9 @@ void flutterEngineShutdown()
         FlutterEngineCollectAOTData(g_aotData);
     }
 
+#if FLUTTERUNREAL_WITH_LUA
     closeLua();
+#endif
 }
 
 int64_t (*break_circular_reference)(void*);
@@ -571,12 +578,15 @@ void flutterEngineTick()
     if (GEngine->GameViewport == nullptr || g_flutterEngine == nullptr)
         return;
 
+#if FLUTTERUNREAL_WITH_LUA
     int top = lua_gettop(g_L);
+#endif
 
     checkScreenResized();
 
     FlutterEngineRunLoop();
 
+#if FLUTTERUNREAL_WITH_LUA
     static uint64_t lastTime = 0;
     uint64_t currentTime = getTimeStamp();
     if (break_circular_reference && lastTime + 3ull * 1000ull * 1000ull * 1000ull < currentTime) //3 seconds
@@ -587,6 +597,7 @@ void flutterEngineTick()
     }
 
     check(lua_gettop(g_L) == top);
+#endif
 }
 
 /*
@@ -886,6 +897,8 @@ int64_t testDartCallCpp(int64_t i, int64_t j)
 
 Cpp2Dart(testDartCallCpp)
 
+#if FLUTTERUNREAL_WITH_LUA
+
 LuaFunction(dartGC)
 {
     DartStateScope scope;
@@ -910,3 +923,5 @@ LuaFunction(getLuaPath)
     lua_pushlstring(L, g_luaPath.c_str(), g_luaPath.size());
     return 1;
 }
+
+#endif

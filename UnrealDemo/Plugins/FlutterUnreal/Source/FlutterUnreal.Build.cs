@@ -1,6 +1,11 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 using System.IO;
+#if UE_5_0_OR_LATER
+using EpicGames.Core;
+#else
+using Tools.DotNETCommon;
+#endif
 using UnrealBuildTool;
 
 public class FlutterUnreal : ModuleRules
@@ -126,5 +131,25 @@ public class FlutterUnreal : ModuleRules
 				// ... add any modules that your module loads dynamically here ...
 			}
 			);
-	}
+
+        int withLua = GetWithLuaConfig();
+        Log.TraceInformation("FLUTTERUNREAL_WITH_LUA={0}", withLua);
+        PublicDefinitions.Add("FLUTTERUNREAL_WITH_LUA=" + withLua);
+    }
+
+    private int GetWithLuaConfig()
+    {
+        var projectDir = Target.ProjectFile.Directory;
+        var configFilePath = projectDir + "/Config/FlutterUnreal.ini";
+        var configFileReference = new FileReference(configFilePath);
+        var configFile = FileReference.Exists(configFileReference) ? new ConfigFile(configFileReference) : new ConfigFile();
+        var config = new ConfigHierarchy(new[] { configFile });
+        const string section = "/FlutterUnreal";
+
+        int withLua;
+        if (config.GetInt32(section, "WithLua", out withLua))
+            return withLua;
+        
+		return 1;
+    }
 }

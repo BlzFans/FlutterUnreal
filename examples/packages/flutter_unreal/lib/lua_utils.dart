@@ -1025,6 +1025,11 @@ void _initDebugUtils() {
 
 void _initLuaUtils() {
   g_L = luaGetGlobalState();
+  debugPrint("LuaState ${g_L}");
+  if (g_L.address == 0)
+  {
+    return;
+  }
 
   int address;
 

@@ -94,6 +94,8 @@ void sendEmptyResponse(const FlutterPlatformMessage* message)
     FlutterEngineSendPlatformMessageResponse(g_flutterEngine, message->response_handle, nullptr, 0);
 }
 
+#if FLUTTERUNREAL_WITH_LUA
+
 LuaFunction(flutterSendMessage)
 {
     const char* channel = luaL_checkstring(L, 1);
@@ -103,3 +105,5 @@ LuaFunction(flutterSendMessage)
     flutterSendMessage(channel, message, (uint32_t)l);
     return 0;
 }
+
+#endif

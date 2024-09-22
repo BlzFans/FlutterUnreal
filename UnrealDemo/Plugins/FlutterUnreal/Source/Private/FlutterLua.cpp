@@ -4,6 +4,8 @@
 #include "FlutterEmbeder.h"
 #include <string>
 
+#if FLUTTERUNREAL_WITH_LUA
+
 //key = "a.b.c"
 //push the value to stack and return the type of the value
 int luaGetValue(lua_State* L, const char* key)
@@ -130,11 +132,6 @@ int onError(lua_State* L)
 }
 
 lua_State* g_L = nullptr;
-static void* luaGetGlobalState()
-{
-    return g_L;
-}
-Cpp2Dart(luaGetGlobalState);
 
 static int lua_pcall_dart(lua_State* L, int nargs, int nresults, int errfunc)
 {
@@ -729,3 +726,15 @@ LuaConstructor::LuaConstructor(const char* funcName, lua_CFunction func)
     next = first;
     first = this;
 }
+
+#endif //FLUTTERUNREAL_WITH_LUA
+
+static void* luaGetGlobalState()
+{
+#if FLUTTERUNREAL_WITH_LUA
+    return g_L;
+#else
+    return nullptr;
+#endif
+}
+Cpp2Dart(luaGetGlobalState);
