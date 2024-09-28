@@ -22,7 +22,7 @@ bool FFlutterUnrealCustomPresent::Present(int32& InOutSyncInterval)
 	}
 #endif
 
-	GFlutterUnrealModule->EndFrame();
+	GFlutterUnrealModule->renderFlutter();
 	return true;
 }
 

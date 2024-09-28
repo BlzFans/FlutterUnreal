@@ -537,6 +537,7 @@ static int pushglobalfuncname(lua_State* L, lua_Debug* ar) {
     }
 }
 
+//tag_error
 static const char* tag_error_msg(lua_State* L, int arg, int tag)
 {
     //tag_error
@@ -699,9 +700,16 @@ static int panic(lua_State* L)
 
 void initLua()
 {
+#if FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_LUA
     g_L = luaL_newstate();
     lua_atpanic(g_L, panic);
     luaL_openlibs(g_L);
+#elif FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_UNLUA
+    g_L = UnLua::GetState();
+#elif FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_SLUA
+    g_L = LuaState::get()->getLuaState();
+#endif
+
     lua_checkstack(g_L, 300);
 
     LuaConstructor* walk = LuaConstructor::first;
@@ -714,7 +722,10 @@ void initLua()
 
 void closeLua()
 {
+#if FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_LUA
     lua_close(g_L);
+#endif
+
     g_L = nullptr;
 }
 

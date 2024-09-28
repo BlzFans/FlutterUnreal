@@ -2,11 +2,28 @@
 
 #if FLUTTERUNREAL_WITH_LUA
 
+
+#if FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_LUA
 //#include "ThirdParty/lua/lua.hpp"
 extern "C"
 {
 #include "ThirdParty/minilua/minilua.h"
 }
+
+#elif FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_UNLUA
+
+#include "UnLua.h"
+
+#elif FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_SLUA
+
+#include "slua.h"
+using namespace NS_SLUA;
+
+#endif
+
+#ifndef LUA_GNAME
+#define LUA_GNAME "_G"
+#endif
 
 extern lua_State* g_L;
 void initLua();

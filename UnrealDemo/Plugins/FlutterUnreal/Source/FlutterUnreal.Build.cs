@@ -135,6 +135,20 @@ public class FlutterUnreal : ModuleRules
         int withLua = GetWithLuaConfig();
         Log.TraceInformation("FLUTTERUNREAL_WITH_LUA={0}", withLua);
         PublicDefinitions.Add("FLUTTERUNREAL_WITH_LUA=" + withLua);
+  
+        PublicDefinitions.Add("FLUTTERUNREAL_LUA=1"); //Lua
+        PublicDefinitions.Add("FLUTTERUNREAL_UNLUA=2"); //UnLua
+        PublicDefinitions.Add("FLUTTERUNREAL_SLUA=3"); //sluaunreal
+
+        if (withLua == 2)
+        {
+            PrivateDependencyModuleNames.Add("Lua");
+            PrivateDependencyModuleNames.Add("UnLua");
+        }
+        else if (withLua == 3)
+        {
+            PrivateDependencyModuleNames.Add("slua_unreal");
+        }
     }
 
     private int GetWithLuaConfig()

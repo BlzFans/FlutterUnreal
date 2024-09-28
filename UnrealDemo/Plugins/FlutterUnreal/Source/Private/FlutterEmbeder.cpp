@@ -650,7 +650,7 @@ void flutterEngineRender()
     FlutterEngineResetContext(g_flutterEngine);
 
     g_flutterPresented = false;
-    FlutterEngineRunRenderLoop(); //render loop
+    FlutterEngineRunRenderLoop(); //run expired flutter tasks
     if (!g_flutterPresented)
     {
         FlutterEngineDrawLastTree(g_flutterEngine);
@@ -908,7 +908,7 @@ LuaFunction(dartGC)
 
 LuaFunction(luaGC)
 {
-    lua_gc(L, LUA_GCCOLLECT);
+    lua_gc(L, LUA_GCCOLLECT, 0);
     return 0;
 }
 

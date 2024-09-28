@@ -15,7 +15,7 @@ public:
 	void OnViewportCreated();
 	void StartCustomPresent(UGameViewportClient* GameViewport);
 
-	void EndFrame();
+	void renderFlutter();
 
 	void InitFlutterEngine(ENamedThreads::Type renderThreadType);
 	void InitFlutterEngine_RenderThread();

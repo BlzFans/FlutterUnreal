@@ -3,6 +3,7 @@
 #include "FlutterUnrealCustomPresent.h"
 #include "FlutterInput.h"
 #include "FlutterEmbeder.h"
+#include "FlutterLua.h"
 #include "ThirdParty/flutter_engine/flutter_embedder.h"
 
 #if PLATFORM_WINDOWS
@@ -170,15 +171,29 @@ void FFlutterUnrealModule::Tick(float DeltaSeconds)
 
 void FFlutterUnrealModule::InitFlutterEngine(ENamedThreads::Type renderThreadType)
 {
-	FlutterEngineInitStage.Increment();
+#if FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_SLUA
+	if (LuaState::get() == nullptr)
+	{
+		AsyncTask(ENamedThreads::GameThread, [renderThreadType]() {
+			GFlutterUnrealModule->InitFlutterEngine(renderThreadType);
+		});
+		return;
+	}
+#endif
+
+	FlutterEngineInitStage.Increment(); //2
 
 	AsyncTask(renderThreadType, [this]() {
 		while (this->FlutterEngineInitStage.GetValue() == 2)
 		{
-			FlutterEngineRunRenderLoop(); //render loop
+			FlutterEngineRunRenderLoop(); //run expired flutter tasks
 			FPlatformProcess::Sleep(0.002f);
 		}
 	});
+
+	//debug dart:
+	//Execute the following command in the directory where main.dart is located
+	//flutter.bat attach -d windows --debug-url http://127.0.0.1:12321 
 
 	//src/flutter/shell/common/switches.h
 	flutterEngineInit(
@@ -189,14 +204,14 @@ void FFlutterUnrealModule::InitFlutterEngine(ENamedThreads::Type renderThreadTyp
 		"--observatory-port=12321"
 	);
 
-	FlutterEngineInitStage.Increment();
+	FlutterEngineInitStage.Increment(); //3
 }
 
 void FFlutterUnrealModule::InitFlutterEngine_RenderThread()
 {
-	if (FlutterEngineInitStage.GetValue() == 0)
+	if (FlutterEngineInitStage.GetValue() == 0) //0
 	{
-		FlutterEngineInitStage.Increment();
+		FlutterEngineInitStage.Increment();     //1
 		FlutterEngineInitRenderLoop(
 			[](void*) -> bool {
 				if (!GIsThreadedRendering)
@@ -213,7 +228,7 @@ void FFlutterUnrealModule::InitFlutterEngine_RenderThread()
 	}
 }
 
-void FFlutterUnrealModule::EndFrame()
+void FFlutterUnrealModule::renderFlutter()
 {
 	if (GEngine->GameViewport == nullptr)
 		return;
@@ -221,7 +236,7 @@ void FFlutterUnrealModule::EndFrame()
 	InitFlutterEngine_RenderThread();
 	if (FlutterEngineInitStage.GetValue() < 3)
 	{
-		FlutterEngineRunRenderLoop(); //render loop
+		FlutterEngineRunRenderLoop(); //run expired flutter tasks
 	}
 	else
 	{

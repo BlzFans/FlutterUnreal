@@ -1,5 +1,5 @@
 
-#if FLUTTERUNREAL_WITH_LUA
+#if FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_LUA
 
 extern void lua_print(const char* s, size_t l);
 #define lua_writestring lua_print
