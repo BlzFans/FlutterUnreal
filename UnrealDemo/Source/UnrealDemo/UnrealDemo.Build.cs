@@ -1,6 +1,9 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
-
+#if UE_5_0_OR_LATER
 using EpicGames.Core;
+#else
+using Tools.DotNETCommon;
+#endif
 using UnrealBuildTool;
 
 public class UnrealDemo : ModuleRules
