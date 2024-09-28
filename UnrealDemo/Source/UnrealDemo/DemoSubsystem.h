@@ -21,6 +21,9 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection);
 	virtual void Deinitialize();
 
+	UFUNCTION()
+	void OnPawnControllerChanged(APawn* InPawn, AController* InController);
+
 #if FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_SLUA
 	NS_SLUA::LuaState* state;
 #endif

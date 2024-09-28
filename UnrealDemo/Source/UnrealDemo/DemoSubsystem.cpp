@@ -57,6 +57,8 @@ void UDemoSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 #if FLUTTERUNREAL_WITH_LUA == FLUTTERUNREAL_SLUA
 	state = CreateLuaState(GetGameInstance());
 #endif
+
+	GetGameInstance()->GetOnPawnControllerChanged().AddDynamic(this, &UDemoSubsystem::OnPawnControllerChanged);
 }
 
 void UDemoSubsystem::Deinitialize()
@@ -69,3 +71,10 @@ void UDemoSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
+void UDemoSubsystem::OnPawnControllerChanged(APawn* InPawn, AController* InController)
+{
+	APlayerController* MyController = GetWorld()->GetFirstPlayerController();
+	MyController->bShowMouseCursor = true;
+	MyController->bEnableClickEvents = true;
+	MyController->bEnableMouseOverEvents = true;
+}
