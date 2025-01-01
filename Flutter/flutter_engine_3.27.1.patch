@@ -1,0 +1,1832 @@
+diff --git a/flow/compositor_context.cc b/flow/compositor_context.cc
+index 0a94e0f530..993e9b1aad 100644
+--- a/flow/compositor_context.cc
++++ b/flow/compositor_context.cc
+@@ -176,7 +176,7 @@ void CompositorContext::ScopedFrame::PaintLayerTreeSkia(
+       paint.setBlendMode(DlBlendMode::kSrc);
+       canvas()->SaveLayer(&bounds, &paint);
+     }
+-    canvas()->Clear(DlColor::kTransparent());
++    //canvas()->Clear(DlColor::kTransparent());
+   }
+ 
+   // The canvas()->Restore() is taken care of by the DlAutoCanvasRestore
+diff --git a/fml/message_loop.cc b/fml/message_loop.cc
+index f392265583..7eeed4bcbc 100644
+--- a/fml/message_loop.cc
++++ b/fml/message_loop.cc
+@@ -13,8 +13,20 @@
+ #include "flutter/fml/task_runner.h"
+ 
+ namespace fml {
++    
++template <typename T>
++class UniquePtr : public std::unique_ptr<T> {
++ public:
++  ~UniquePtr() {
++    if (!ownership) {
++      this->release();
++    }
++  }
++
++  bool ownership = true;
++};
+ 
+-static thread_local std::unique_ptr<MessageLoop> tls_message_loop;
++static thread_local UniquePtr<MessageLoop> tls_message_loop;
+ 
+ MessageLoop& MessageLoop::GetCurrent() {
+   auto* loop = tls_message_loop.get();
+@@ -24,6 +36,13 @@ MessageLoop& MessageLoop::GetCurrent() {
+   return *loop;
+ }
+ 
++void MessageLoop::SetCurrent(MessageLoop* loop) {
++  if (tls_message_loop.get() == nullptr) {
++    tls_message_loop.reset(loop);
++    tls_message_loop.ownership = false;
++  }
++}
++
+ void MessageLoop::EnsureInitializedForCurrentThread() {
+   if (tls_message_loop.get() != nullptr) {
+     // Already initialized.
+diff --git a/fml/message_loop.h b/fml/message_loop.h
+index ccc1f70b93..6ea63f8080 100644
+--- a/fml/message_loop.h
++++ b/fml/message_loop.h
+@@ -29,6 +29,7 @@ class MessageLoop {
+  public:
+   FML_EMBEDDER_ONLY
+   static MessageLoop& GetCurrent();
++  static void SetCurrent(MessageLoop* loop);
+ 
+   void Run();
+ 
+@@ -57,7 +58,7 @@ class MessageLoop {
+   /// \see fml::MessageLoopTaskQueues
+   static TaskQueueId GetCurrentTaskQueueId();
+ 
+- private:
++ protected:
+   friend class TaskRunner;
+   friend class MessageLoopImpl;
+ 
+diff --git a/shell/common/rasterizer.h b/shell/common/rasterizer.h
+index 00113b269a..389501a02e 100644
+--- a/shell/common/rasterizer.h
++++ b/shell/common/rasterizer.h
+@@ -600,6 +600,9 @@ class Rasterizer final : public SnapshotDelegate,
+   ///             This method is used only in unit tests.
+   ///
+   std::optional<DrawSurfaceStatus> GetLastDrawStatus(int64_t view_id);
++  
++  void ResetLastLayerTrees() { view_records_.clear(); }
++  bool HaveLastLayerTrees() { return view_records_.size() > 0 ? true : false; }
+ 
+  private:
+   // The result status of DoDraw, DrawToSurfaces, and DrawToSurfacesUnsafe.
+diff --git a/shell/common/shell.cc b/shell/common/shell.cc
+index 453845b3b7..757455f840 100644
+--- a/shell/common/shell.cc
++++ b/shell/common/shell.cc
+@@ -1088,7 +1088,7 @@ void Shell::OnPlatformViewDispatchPlatformMessage(
+ 
+     // The static leak checker gets confused by the use of fml::MakeCopyable.
+     // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+-    task_runners_.GetUITaskRunner()->PostTask(
++    fml::TaskRunner::RunNowOrPostTask(task_runners_.GetUITaskRunner(),
+         fml::MakeCopyable([engine = engine_->GetWeakPtr(),
+                            message = std::move(message)]() mutable {
+           if (engine) {
+diff --git a/shell/gpu/BUILD.gn b/shell/gpu/BUILD.gn
+index ebf3bc45e1..a6b2e2e72a 100644
+--- a/shell/gpu/BUILD.gn
++++ b/shell/gpu/BUILD.gn
+@@ -91,6 +91,28 @@ source_set("gpu_surface_metal") {
+   }
+ }
+ 
++source_set("gpu_surface_d3d11") {
++  sources = [
++    "gpu_surface_d3d11.cc",
++    "gpu_surface_d3d11.h",
++    "gpu_surface_d3d11_delegate.h",
++  ]
++  public_deps = gpu_common_deps + [
++    "//flutter/shell/platform/embedder:embedder_headers",
++  ]
++}
++
++source_set("gpu_surface_d3d12") {
++  sources = [
++    "gpu_surface_d3d12.cc",
++    "gpu_surface_d3d12.h",
++    "gpu_surface_d3d12_delegate.h",
++  ]
++  public_deps = gpu_common_deps + [
++    "//flutter/shell/platform/embedder:embedder_headers",
++  ]
++}
++
+ if (is_mac) {
+   impeller_component("gpu_surface_metal_unittests") {
+     testonly = true
+diff --git a/shell/gpu/gpu.gni b/shell/gpu/gpu.gni
+index 8e09b4f465..debe1000f7 100644
+--- a/shell/gpu/gpu.gni
++++ b/shell/gpu/gpu.gni
+@@ -32,6 +32,11 @@ template("shell_gpu_configuration") {
+     if (invoker.enable_metal) {
+       public_deps += [ "//flutter/shell/gpu:gpu_surface_metal" ]
+     }
++    
++    if (is_win) {
++      public_deps += [ "//flutter/shell/gpu:gpu_surface_d3d11" ]
++      public_deps += [ "//flutter/shell/gpu:gpu_surface_d3d12" ]
++    }
+   }
+ 
+   config("${target_name}_config") {
+diff --git a/shell/gpu/gpu_surface_d3d11.cc b/shell/gpu/gpu_surface_d3d11.cc
+new file mode 100644
+index 0000000000..b396c86c38
+--- /dev/null
++++ b/shell/gpu/gpu_surface_d3d11.cc
+@@ -0,0 +1,151 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "flutter/shell/gpu/gpu_surface_d3d11.h"
++
++#include "flutter/fml/logging.h"
++#include "fml/trace_event.h"
++#include "include/core/SkColorSpace.h"
++#include "include/core/SkSize.h"
++
++#include "third_party/skia/include/gpu/ganesh/GrDirectContext.h"
++#include "third_party/skia/include/gpu/ganesh/GrBackendSurface.h"
++#include "third_party/skia/include/gpu/ganesh/SkSurfaceGanesh.h"
++#include "third_party/skia/include/gpu/ganesh/d3d11/GrD3D11Types.h"
++
++namespace flutter {
++
++GPUSurfaceD3D11::GPUSurfaceD3D11(GPUSurfaceD3D11Delegate* delegate,
++                                   const sk_sp<GrDirectContext>& skia_context,
++                                   bool render_to_surface)
++    : delegate_(delegate),
++      skia_context_(skia_context),
++      render_to_surface_(render_to_surface),
++      weak_factory_(this)
++      {}
++
++GPUSurfaceD3D11::~GPUSurfaceD3D11() = default;
++
++bool GPUSurfaceD3D11::IsValid() {
++  return skia_context_ != nullptr;
++}
++
++std::unique_ptr<SurfaceFrame> GPUSurfaceD3D11::AcquireFrame(
++    const SkISize& frame_size) {
++  if (!IsValid()) {
++    FML_LOG(ERROR) << "D3D11 surface was invalid.";
++    return nullptr;
++  }
++
++  if (frame_size.isEmpty()) {
++    FML_LOG(ERROR) << "D3D11 surface was asked for an empty frame.";
++    return nullptr;
++  }
++
++  if (!render_to_surface_) {
++    return std::make_unique<SurfaceFrame>(
++        nullptr, SurfaceFrame::FramebufferInfo(),
++        [](const SurfaceFrame& surface_frame, DlCanvas* canvas) {
++          return true;
++        },
++        [](const SurfaceFrame& surface_frame) { return true; }, frame_size);
++  }
++
++  ID3D11Texture2D* backBuffer = delegate_->AcquireImage(frame_size);
++  if (!backBuffer) {
++    FML_LOG(ERROR) << "Invalid back buffer given by the embedder.";
++    return nullptr;
++  }
++
++  sk_sp<SkSurface> surface = CreateSurfaceFromD3D11Texture(backBuffer, frame_size);
++
++  if (!surface) {
++    FML_LOG(ERROR) << "Could not create the SkSurface from the image.";
++    return nullptr;
++  }
++
++  SurfaceFrame::EncodeCallback encode_callback =
++      [delegate = delegate_](const SurfaceFrame&, DlCanvas* canvas) -> bool {
++    if (canvas == nullptr) {
++      FML_DLOG(ERROR) << "Canvas not available.";
++      return false;
++    }
++
++    canvas->Flush();
++
++    return delegate->Present();
++  };
++
++  SurfaceFrame::SubmitCallback submit_callback =
++      [delegate = delegate_](const SurfaceFrame&) -> bool {
++    TRACE_EVENT0("flutter", "GPUSurfaceD3D11::Present");
++    return delegate->Present();
++  };
++
++  SurfaceFrame::FramebufferInfo framebuffer_info{.supports_readback = true};
++
++  return std::make_unique<SurfaceFrame>(std::move(surface), framebuffer_info,
++                                        std::move(encode_callback),
++                                        std::move(submit_callback), frame_size);
++}
++
++SkMatrix GPUSurfaceD3D11::GetRootTransformation() const {
++  // This backend does not support delegating to the underlying platform to
++  // query for root surface transformations. Just return identity.
++  SkMatrix matrix;
++  matrix.reset();
++  return matrix;
++}
++
++GrDirectContext* GPUSurfaceD3D11::GetContext() {
++  return skia_context_.get();
++}
++
++static SkColorType ColorTypeFromFormat(const DXGI_FORMAT format) {
++  switch (format) {
++    case DXGI_FORMAT_R8G8B8A8_UNORM:
++    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
++      return SkColorType::kRGBA_8888_SkColorType;
++    case DXGI_FORMAT_B8G8R8A8_UNORM:
++    case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
++      return SkColorType::kBGRA_8888_SkColorType;
++
++    case DXGI_FORMAT_R10G10B10A2_UNORM:
++      return SkColorType::kRGBA_1010102_SkColorType;
++
++    case DXGI_FORMAT_R16G16B16A16_FLOAT: 
++        return SkColorType::kRGBA_F16_SkColorType;
++
++    default:
++      return SkColorType::kUnknown_SkColorType;
++  }
++}
++
++sk_sp<SkSurface> GPUSurfaceD3D11::CreateSurfaceFromD3D11Texture(
++    ID3D11Texture2D* texture,
++    const SkISize& size) {
++  
++  D3D11_TEXTURE2D_DESC desc;
++  texture->GetDesc(&desc);
++
++  GrD3D11TextureInfo textureInfo{};
++  textureInfo.fFormat = desc.Format;
++  textureInfo.fTexture.retain(texture);
++  textureInfo.fSampleCount = 1;
++  textureInfo.fLevelCount = 1;
++
++  GrBackendTexture backend_texture(size.width(), size.height(),
++                                   textureInfo.toD3D12Info());
++  SkSurfaceProps surface_properties(0, kUnknown_SkPixelGeometry);
++  return SkSurfaces::WrapBackendTexture(
++      skia_context_.get(),                // context
++      backend_texture,                    // back-end texture
++      kTopLeft_GrSurfaceOrigin,           // surface origin
++      1,                                  // sample count
++      ColorTypeFromFormat(desc.Format),   // color type
++      SkColorSpace::MakeSRGB(),           // color space
++      &surface_properties);               // surface properties
++}
++
++}  // namespace flutter
+diff --git a/shell/gpu/gpu_surface_d3d11.h b/shell/gpu/gpu_surface_d3d11.h
+new file mode 100644
+index 0000000000..4ddd75e2b9
+--- /dev/null
++++ b/shell/gpu/gpu_surface_d3d11.h
+@@ -0,0 +1,53 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef SHELL_GPU_GPU_SURFACE_D3D11_H_
++#define SHELL_GPU_GPU_SURFACE_D3D11_H_
++
++#include <memory>
++
++#include "flutter/flow/surface.h"
++#include "flutter/fml/macros.h"
++#include "flutter/fml/memory/weak_ptr.h"
++#include "flutter/shell/gpu/gpu_surface_d3d11_delegate.h"
++#include "include/core/SkRefCnt.h"
++
++namespace flutter {
++
++class GPUSurfaceD3D11 : public Surface {
++ public:
++  GPUSurfaceD3D11(GPUSurfaceD3D11Delegate* delegate,
++                   const sk_sp<GrDirectContext>& context,
++                   bool render_to_surface);
++
++  ~GPUSurfaceD3D11() override;
++
++  // |Surface|
++  bool IsValid() override;
++
++  // |Surface|
++  std::unique_ptr<SurfaceFrame> AcquireFrame(const SkISize& size) override;
++
++  // |Surface|
++  SkMatrix GetRootTransformation() const override;
++
++  // |Surface|
++  GrDirectContext* GetContext() override;
++
++ private:
++  GPUSurfaceD3D11Delegate* delegate_;
++  sk_sp<GrDirectContext> skia_context_;
++  bool render_to_surface_;
++
++  fml::WeakPtrFactory<GPUSurfaceD3D11> weak_factory_;
++  sk_sp<SkSurface> CreateSurfaceFromD3D11Texture(
++    ID3D11Texture2D* texture,
++    const SkISize& size);
++
++  FML_DISALLOW_COPY_AND_ASSIGN(GPUSurfaceD3D11);
++};
++
++}  // namespace flutter
++
++#endif  // SHELL_GPU_GPU_SURFACE_D3D11_H_
+diff --git a/shell/gpu/gpu_surface_d3d11_delegate.h b/shell/gpu/gpu_surface_d3d11_delegate.h
+new file mode 100644
+index 0000000000..300c560bc9
+--- /dev/null
++++ b/shell/gpu/gpu_surface_d3d11_delegate.h
+@@ -0,0 +1,26 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef FLUTTER_SHELL_GPU_GPU_SURFACE_D3D11_DELEGATE_H_
++#define FLUTTER_SHELL_GPU_GPU_SURFACE_D3D11_DELEGATE_H_
++
++#include "flutter/fml/memory/ref_ptr.h"
++#include "flutter/shell/platform/embedder/embedder.h"
++#include "third_party/skia/include/core/SkSize.h"
++
++struct ID3D11Texture2D;
++
++namespace flutter {
++
++class GPUSurfaceD3D11Delegate {
++ public:
++  virtual ~GPUSurfaceD3D11Delegate() = default;
++
++  virtual ID3D11Texture2D* AcquireImage(const SkISize& size) = 0;
++  virtual bool Present() = 0;
++};
++
++}  // namespace flutter
++
++#endif  // FLUTTER_SHELL_GPU_GPU_SURFACE_D3D11_DELEGATE_H_
+diff --git a/shell/gpu/gpu_surface_d3d12.cc b/shell/gpu/gpu_surface_d3d12.cc
+new file mode 100644
+index 0000000000..c93bcfefa3
+--- /dev/null
++++ b/shell/gpu/gpu_surface_d3d12.cc
+@@ -0,0 +1,146 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "flutter/shell/gpu/gpu_surface_d3d12.h"
++
++#include "flutter/fml/logging.h"
++#include "fml/trace_event.h"
++#include "include/core/SkColorSpace.h"
++#include "include/core/SkSize.h"
++
++#include "third_party/skia/include/gpu/ganesh/GrDirectContext.h"
++#include "third_party/skia/include/gpu/ganesh/GrBackendSurface.h"
++#include "third_party/skia/include/gpu/ganesh/SkSurfaceGanesh.h"
++#include "third_party/skia/include/gpu/ganesh/d3d/GrD3DBackendContext.h"
++
++namespace flutter {
++
++GPUSurfaceD3D12::GPUSurfaceD3D12(GPUSurfaceD3D12Delegate* delegate,
++                                   const sk_sp<GrDirectContext>& skia_context,
++                                   bool render_to_surface)
++    : delegate_(delegate),
++      skia_context_(skia_context),
++      render_to_surface_(render_to_surface),
++      weak_factory_(this)
++      {}
++
++GPUSurfaceD3D12::~GPUSurfaceD3D12() = default;
++
++bool GPUSurfaceD3D12::IsValid() {
++  return skia_context_ != nullptr;
++}
++
++std::unique_ptr<SurfaceFrame> GPUSurfaceD3D12::AcquireFrame(
++    const SkISize& frame_size) {
++  if (!IsValid()) {
++    FML_LOG(ERROR) << "D3D11 surface was invalid.";
++    return nullptr;
++  }
++
++  if (frame_size.isEmpty()) {
++    FML_LOG(ERROR) << "D3D11 surface was asked for an empty frame.";
++    return nullptr;
++  }
++
++  if (!render_to_surface_) {
++    return std::make_unique<SurfaceFrame>(
++        nullptr, SurfaceFrame::FramebufferInfo(),
++        [](const SurfaceFrame& surface_frame, DlCanvas* canvas) {
++          return true;
++        },
++        [](const SurfaceFrame& surface_frame) { return true; }, frame_size);
++  }
++
++  ID3D12Resource* backBuffer = delegate_->AcquireImage(frame_size);
++  if (!backBuffer) {
++    FML_LOG(ERROR) << "Invalid back buffer given by the embedder.";
++    return nullptr;
++  }
++
++  sk_sp<SkSurface> surface = CreateSurfaceFromD3D12Texture(backBuffer, frame_size);
++
++  if (!surface) {
++    FML_LOG(ERROR) << "Could not create the SkSurface from the image.";
++    return nullptr;
++  }
++
++  SurfaceFrame::EncodeCallback encode_callback =
++      [delegate = delegate_](const SurfaceFrame&,
++                                            DlCanvas* canvas) -> bool {
++    if (canvas == nullptr) {
++      FML_DLOG(ERROR) << "Canvas not available.";
++      return false;
++    }
++
++    canvas->Flush();
++
++    return delegate->Present();
++  };
++
++  SurfaceFrame::SubmitCallback submit_callback =
++      [delegate = delegate_](const SurfaceFrame&) -> bool {
++    TRACE_EVENT0("flutter", "GPUSurfaceD3D12::Present");
++    return delegate->Present();
++  };
++
++  SurfaceFrame::FramebufferInfo framebuffer_info{.supports_readback = true};
++
++  return std::make_unique<SurfaceFrame>(std::move(surface), framebuffer_info,
++                                        std::move(encode_callback),
++                                        std::move(submit_callback), frame_size);
++}
++
++SkMatrix GPUSurfaceD3D12::GetRootTransformation() const {
++  // This backend does not support delegating to the underlying platform to
++  // query for root surface transformations. Just return identity.
++  SkMatrix matrix;
++  matrix.reset();
++  return matrix;
++}
++
++GrDirectContext* GPUSurfaceD3D12::GetContext() {
++  return skia_context_.get();
++}
++
++static SkColorType ColorTypeFromFormat(const DXGI_FORMAT format) {
++  switch (format) {
++    case DXGI_FORMAT_R8G8B8A8_UNORM:
++    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
++      return SkColorType::kRGBA_8888_SkColorType;
++    case DXGI_FORMAT_B8G8R8A8_UNORM:
++    case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
++      return SkColorType::kBGRA_8888_SkColorType;
++
++    case DXGI_FORMAT_R10G10B10A2_UNORM:
++      return SkColorType::kRGBA_1010102_SkColorType;
++
++    case DXGI_FORMAT_R16G16B16A16_FLOAT: 
++        return SkColorType::kRGBA_F16_SkColorType;
++
++    default:
++      return SkColorType::kUnknown_SkColorType;
++  }
++}
++
++sk_sp<SkSurface> GPUSurfaceD3D12::CreateSurfaceFromD3D12Texture(
++    ID3D12Resource* texture,
++    const SkISize& size) {
++
++  D3D12_RESOURCE_DESC desc = texture->GetDesc();
++  GrD3DTextureResourceInfo info(texture, nullptr, D3D12_RESOURCE_STATE_PRESENT,
++                                desc.Format, 1, 1, 0);
++ 
++  GrBackendTexture backend_texture(size.width(), size.height(), info);
++  SkSurfaceProps surface_properties(0, kUnknown_SkPixelGeometry);
++  return SkSurfaces::WrapBackendTexture(
++      skia_context_.get(),                      // context
++      backend_texture,                          // back-end texture
++      kTopLeft_GrSurfaceOrigin,                 // surface origin
++      1,                                        // sample count
++      ColorTypeFromFormat(desc.Format),         // color type
++      SkColorSpace::MakeSRGB(),                 // color space
++      &surface_properties);                     // surface properties
++}
++
++}  // namespace flutter
+diff --git a/shell/gpu/gpu_surface_d3d12.h b/shell/gpu/gpu_surface_d3d12.h
+new file mode 100644
+index 0000000000..6c23ec57d6
+--- /dev/null
++++ b/shell/gpu/gpu_surface_d3d12.h
+@@ -0,0 +1,53 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef SHELL_GPU_GPU_SURFACE_D3D12_H_
++#define SHELL_GPU_GPU_SURFACE_D3D12_H_
++
++#include <memory>
++
++#include "flutter/flow/surface.h"
++#include "flutter/fml/macros.h"
++#include "flutter/fml/memory/weak_ptr.h"
++#include "flutter/shell/gpu/gpu_surface_d3d12_delegate.h"
++#include "include/core/SkRefCnt.h"
++
++namespace flutter {
++
++class GPUSurfaceD3D12 : public Surface {
++ public:
++  GPUSurfaceD3D12(GPUSurfaceD3D12Delegate* delegate,
++                   const sk_sp<GrDirectContext>& context,
++                   bool render_to_surface);
++
++  ~GPUSurfaceD3D12() override;
++
++  // |Surface|
++  bool IsValid() override;
++
++  // |Surface|
++  std::unique_ptr<SurfaceFrame> AcquireFrame(const SkISize& size) override;
++
++  // |Surface|
++  SkMatrix GetRootTransformation() const override;
++
++  // |Surface|
++  GrDirectContext* GetContext() override;
++
++ private:
++  GPUSurfaceD3D12Delegate* delegate_;
++  sk_sp<GrDirectContext> skia_context_;
++  bool render_to_surface_;
++
++  fml::WeakPtrFactory<GPUSurfaceD3D12> weak_factory_;
++  sk_sp<SkSurface> CreateSurfaceFromD3D12Texture(
++    ID3D12Resource* texture,
++    const SkISize& size);
++
++  FML_DISALLOW_COPY_AND_ASSIGN(GPUSurfaceD3D12);
++};
++
++}  // namespace flutter
++
++#endif  // SHELL_GPU_GPU_SURFACE_D3D12_H_
+diff --git a/shell/gpu/gpu_surface_d3d12_delegate.h b/shell/gpu/gpu_surface_d3d12_delegate.h
+new file mode 100644
+index 0000000000..b858afa1ce
+--- /dev/null
++++ b/shell/gpu/gpu_surface_d3d12_delegate.h
+@@ -0,0 +1,26 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef FLUTTER_SHELL_GPU_GPU_SURFACE_D3D12_DELEGATE_H_
++#define FLUTTER_SHELL_GPU_GPU_SURFACE_D3D12_DELEGATE_H_
++
++#include "flutter/fml/memory/ref_ptr.h"
++#include "flutter/shell/platform/embedder/embedder.h"
++#include "third_party/skia/include/core/SkSize.h"
++
++struct ID3D12Resource;
++
++namespace flutter {
++
++class GPUSurfaceD3D12Delegate {
++ public:
++  virtual ~GPUSurfaceD3D12Delegate() = default;
++
++  virtual ID3D12Resource* AcquireImage(const SkISize& size) = 0;
++  virtual bool Present() = 0;
++};
++
++}  // namespace flutter
++
++#endif  // FLUTTER_SHELL_GPU_GPU_SURFACE_D3D12_DELEGATE_H_
+diff --git a/shell/gpu/gpu_surface_vulkan.cc b/shell/gpu/gpu_surface_vulkan.cc
+index c6f5c62ca4..96888c1eda 100644
+--- a/shell/gpu/gpu_surface_vulkan.cc
++++ b/shell/gpu/gpu_surface_vulkan.cc
+@@ -116,7 +116,7 @@ sk_sp<SkSurface> GPUSurfaceVulkan::CreateSurfaceFromVulkanImage(
+   GrVkImageInfo image_info = {
+       .fImage = image,
+       .fImageTiling = VK_IMAGE_TILING_OPTIMAL,
+-      .fImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
++      .fImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+       .fFormat = format,
+       .fImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                           VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+@@ -152,6 +152,14 @@ SkColorType GPUSurfaceVulkan::ColorTypeFromFormat(const VkFormat format) {
+     case VK_FORMAT_B8G8R8A8_UNORM:
+     case VK_FORMAT_B8G8R8A8_SRGB:
+       return SkColorType::kBGRA_8888_SkColorType;
++
++    case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
++    case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
++      return SkColorType::kRGBA_1010102_SkColorType;
++
++    case VK_FORMAT_R16G16B16A16_SFLOAT:
++      return SkColorType::kRGBA_F16_SkColorType;
++
+     default:
+       return SkColorType::kUnknown_SkColorType;
+   }
+diff --git a/shell/platform/embedder/BUILD.gn b/shell/platform/embedder/BUILD.gn
+index 38c7e2db98..b7680a833f 100644
+--- a/shell/platform/embedder/BUILD.gn
++++ b/shell/platform/embedder/BUILD.gn
+@@ -182,6 +182,15 @@ template("embedder_source_set") {
+       deps += [ "//flutter/shell/platform/android:icudtl_asm" ]
+       sources += [ "$root_build_dir/gen/flutter/shell/platform/android/flutter/third_party/icu/flutter/icudtl.dat.S" ]
+     }
++    
++    if (is_win) {
++      sources += [
++        "embedder_surface_d3d11.cc",
++        "embedder_surface_d3d11.h",
++        "embedder_surface_d3d12.cc",
++        "embedder_surface_d3d12.h",
++      ]
++    }
+ 
+     public_configs += [
+       ":embedder_gpu_configuration_config",
+diff --git a/shell/platform/embedder/embedder.cc b/shell/platform/embedder/embedder.cc
+index 2adf56c592..8351665300 100644
+--- a/shell/platform/embedder/embedder.cc
++++ b/shell/platform/embedder/embedder.cc
+@@ -24,6 +24,12 @@
+ #include "third_party/skia/include/gpu/ganesh/GrBackendSurface.h"
+ #include "third_party/skia/include/gpu/ganesh/SkSurfaceGanesh.h"
+ 
++#include "third_party/tonic/converter/dart_converter.h"
++#include "third_party/tonic/dart_args.h"
++#include "third_party/tonic/logging/dart_invoke.h"
++#include "third_party/tonic/typed_data/dart_byte_data.h"
++tonic::DartPersistentValue flutter_unreal_library;
++
+ #if !defined(FLUTTER_NO_EXPORT)
+ #if FML_OS_WIN
+ #define FLUTTER_EXPORT __declspec(dllexport)
+@@ -225,6 +231,22 @@ static bool IsVulkanRendererConfigValid(const FlutterRendererConfig* config) {
+   return true;
+ }
+ 
++static bool IsD3D11RendererConfigValid(const FlutterRendererConfig* config) {
++  if (config->type != kD3D11) {
++    return false;
++  }
++
++  return true;
++}
++
++static bool IsD3D12RendererConfigValid(const FlutterRendererConfig* config) {
++  if (config->type != kD3D12) {
++    return false;
++  }
++
++  return true;
++}
++
+ static bool IsRendererValid(const FlutterRendererConfig* config) {
+   if (config == nullptr) {
+     return false;
+@@ -239,6 +261,10 @@ static bool IsRendererValid(const FlutterRendererConfig* config) {
+       return IsMetalRendererConfigValid(config);
+     case kVulkan:
+       return IsVulkanRendererConfigValid(config);
++    case kD3D11:
++      return IsD3D11RendererConfigValid(config);
++    case kD3D12:
++      return IsD3D12RendererConfigValid(config);
+     default:
+       return false;
+   }
+@@ -696,6 +722,115 @@ InferVulkanPlatformViewCreationCallback(
+ #endif  // SHELL_ENABLE_VULKAN
+ }
+ 
++#if FML_OS_WIN
++
++static flutter::Shell::CreateCallback<flutter::PlatformView>
++InferD3D11PlatformViewCreationCallback(
++    const FlutterRendererConfig* config,
++    void* user_data,
++    const flutter::PlatformViewEmbedder::PlatformDispatchTable&
++        platform_dispatch_table,
++    std::unique_ptr<flutter::EmbedderExternalViewEmbedder>
++        external_view_embedder) {
++  if (config->type != kD3D11) {
++    return nullptr;
++  }
++
++  const FlutterD3D11RendererConfig* d3d11_config = &config->d3d11;
++
++  auto d3d11_get_back_buffer =
++      [ptr = d3d11_config->getBackBuffer](
++          const SkISize& frame_size) -> ID3D11Texture2D* {
++    return (ID3D11Texture2D*)ptr();
++  };
++
++  auto d3d11_present = [ptr = d3d11_config->present, user_data]() -> bool {
++    return ptr(user_data);
++  };
++
++  flutter::EmbedderSurfaceD3D11::D3D11DispatchTable d3d11_dispatch_table = {
++      .get_back_buffer = d3d11_get_back_buffer,
++      .present = d3d11_present,
++  };
++
++  std::shared_ptr<flutter::EmbedderExternalViewEmbedder> view_embedder =
++      std::move(external_view_embedder);
++
++  std::unique_ptr<flutter::EmbedderSurfaceD3D11> embedder_surface =
++      std::make_unique<flutter::EmbedderSurfaceD3D11>(
++          (ID3D11Device*)d3d11_config->device,
++          (ID3D11DeviceContext*)d3d11_config->deviceContext,
++          d3d11_dispatch_table, view_embedder);
++
++  return fml::MakeCopyable(
++      [embedder_surface = std::move(embedder_surface), platform_dispatch_table,
++       external_view_embedder =
++           std::move(view_embedder)](flutter::Shell& shell) mutable {
++        return std::make_unique<flutter::PlatformViewEmbedder>(
++            shell,                             // delegate
++            shell.GetTaskRunners(),            // task runners
++            std::move(embedder_surface),       // embedder surface
++            platform_dispatch_table,           // platform dispatch table
++            std::move(external_view_embedder)  // external view embedder
++        );
++      });
++}
++
++static flutter::Shell::CreateCallback<flutter::PlatformView>
++InferD3D12PlatformViewCreationCallback(
++    const FlutterRendererConfig* config,
++    void* user_data,
++    const flutter::PlatformViewEmbedder::PlatformDispatchTable&
++        platform_dispatch_table,
++    std::unique_ptr<flutter::EmbedderExternalViewEmbedder>
++        external_view_embedder) {
++  if (config->type != kD3D12) {
++    return nullptr;
++  }
++
++  const FlutterD3D12RendererConfig* d3d12_config = &config->d3d12;
++
++  auto d3d12_get_back_buffer =
++      [ptr = d3d12_config->getBackBuffer](
++          const SkISize& frame_size) -> ID3D12Resource* {
++    return (ID3D12Resource*)ptr();
++  };
++
++  auto d3d12_present = [ptr = d3d12_config->present, user_data]() -> bool {
++    return ptr(user_data);
++  };
++
++  flutter::EmbedderSurfaceD3D12::D3D12DispatchTable d3d12_dispatch_table = {
++      .get_back_buffer = d3d12_get_back_buffer,
++      .present = d3d12_present,
++  };
++
++  std::shared_ptr<flutter::EmbedderExternalViewEmbedder> view_embedder =
++      std::move(external_view_embedder);
++
++  std::unique_ptr<flutter::EmbedderSurfaceD3D12> embedder_surface =
++      std::make_unique<flutter::EmbedderSurfaceD3D12>(
++          (IDXGIAdapter1*)d3d12_config->adapter,
++          (ID3D12Device*)d3d12_config->device,
++          (ID3D12CommandQueue*)d3d12_config->commandQueue, d3d12_dispatch_table,
++          view_embedder);
++
++  return fml::MakeCopyable(
++      [embedder_surface = std::move(embedder_surface), platform_dispatch_table,
++       external_view_embedder =
++           std::move(view_embedder)](flutter::Shell& shell) mutable {
++        return std::make_unique<flutter::PlatformViewEmbedder>(
++            shell,                             // delegate
++            shell.GetTaskRunners(),            // task runners
++            std::move(embedder_surface),       // embedder surface
++            platform_dispatch_table,           // platform dispatch table
++            std::move(external_view_embedder)  // external view embedder
++        );
++      });
++}
++
++#endif //FML_OS_WIN
++
+ static flutter::Shell::CreateCallback<flutter::PlatformView>
+ InferSoftwarePlatformViewCreationCallback(
+     const FlutterRendererConfig* config,
+@@ -763,6 +898,14 @@ InferPlatformViewCreationCallback(
+       return InferVulkanPlatformViewCreationCallback(
+           config, user_data, platform_dispatch_table,
+           std::move(external_view_embedder));
++    case kD3D11:
++      return InferD3D11PlatformViewCreationCallback(
++          config, user_data, platform_dispatch_table,
++          std::move(external_view_embedder));
++    case kD3D12:
++      return InferD3D12PlatformViewCreationCallback(
++          config, user_data, platform_dispatch_table,
++          std::move(external_view_embedder));
+     default:
+       return nullptr;
+   }
+@@ -3503,6 +3646,230 @@ FlutterEngineResult FlutterEngineSetNextFrameCallback(
+   return kSuccess;
+ }
+ 
++
++void FlutterEngineRunLoop() {
++  auto& loop = fml::MessageLoop::GetCurrent();
++  loop.RunExpiredTasksNow();
++}
++
++void FlutterEngineNativeBinding() {
++  flutter_unreal_library.Set(
++      tonic::DartState::Current(),
++      Dart_LookupLibrary(
++          tonic::ToDart("package:flutter_unreal/flutter_unreal.dart")));
++}
++
++void FlutterEngineSetFfiNativeResolver(FfiNativeResolver resolver) {
++  Dart_SetFfiNativeResolver(flutter_unreal_library.value(),
++                            (Dart_FfiNativeResolver)resolver);
++}
++
++struct DartStateScope {
++  DartStateScope();
++  ~DartStateScope();
++};
++
++DartStateScope::DartStateScope() {
++  FlutterEngineDartEnterIsolate();
++  FlutterEngineDartEnterScope();
++}
++
++DartStateScope::~DartStateScope() {
++  FlutterEngineDartExitScope();
++  FlutterEngineDartExitIsolate();
++}
++
++void FlutterEngineClearPointerEvent() {
++  std::shared_ptr<tonic::DartState> dart_state =
++      flutter_unreal_library.dart_state().lock();
++  if (!dart_state) {
++    return;
++  }
++  tonic::DartState::Scope scope(dart_state);
++  Dart_SetField(flutter_unreal_library.value(),
++                tonic::ToDart("pointerEventHandled"), Dart_False());
++}
++
++bool FlutterEngineGetPointerEventHandled() {
++  DartStateScope scope;
++  Dart_Handle pointerEventHandled = Dart_GetField(
++      flutter_unreal_library.value(), tonic::ToDart("pointerEventHandled"));
++  bool value;
++  Dart_BooleanValue(pointerEventHandled, &value);
++  return value;
++}
++
++void FlutterEngineExecuteCommand(const char* command, void* arg) {
++  Dart_ExecuteInternalCommand(command, arg);
++}
++
++// dart/runtime/vm/gdb_helpers.cc
++DART_EXPORT void _printDartStackTrace();
++void FlutterEnginePrintDartStackTrace() {
++#if (FLUTTER_RUNTIME_MODE == FLUTTER_RUNTIME_MODE_DEBUG)
++  if (Dart_CurrentIsolate() == nullptr) {
++    DartStateScope scope;
++    _printDartStackTrace();
++  } else {
++    _printDartStackTrace();
++  }
++#endif
++}
++
++DART_EXPORT void _printStackTrace();
++void FlutterEnginePrintStackTrace() {
++#if (FLUTTER_RUNTIME_MODE == FLUTTER_RUNTIME_MODE_DEBUG)
++  if (Dart_CurrentIsolate() == nullptr) {
++    DartStateScope scope;
++    _printStackTrace();
++  } else {
++    _printStackTrace();
++  }
++#endif
++}
++
++DART_EXPORT void _printStackTraceWithLocals();
++void FlutterEnginePrintStackTraceWithLocals() {
++#if (FLUTTER_RUNTIME_MODE == FLUTTER_RUNTIME_MODE_DEBUG)
++  if (Dart_CurrentIsolate() == nullptr) {
++    DartStateScope scope;
++    _printStackTraceWithLocals();
++  } else {
++    _printStackTraceWithLocals();
++  }
++#endif
++}
++
++static Dart_Isolate s_prevIsolate = nullptr;
++void FlutterEngineDartEnterIsolate() {
++  std::shared_ptr<tonic::DartState> dart_state =
++      flutter_unreal_library.dart_state().lock();
++  if (!dart_state) {
++    return;
++  }
++
++  Dart_Isolate isolate = dart_state->isolate();
++
++  s_prevIsolate = Dart_CurrentIsolate();
++  if (s_prevIsolate == isolate)
++    return;
++
++  if (s_prevIsolate)
++    Dart_ExitIsolate();
++  Dart_EnterIsolate(isolate);
++}
++
++void FlutterEngineDartExitIsolate() {
++  std::shared_ptr<tonic::DartState> dart_state =
++      flutter_unreal_library.dart_state().lock();
++  if (!dart_state) {
++    return;
++  }
++
++  Dart_Isolate isolate = dart_state->isolate();
++
++  Dart_Isolate current = Dart_CurrentIsolate();
++  // TONIC_DCHECK(!current || current == isolate_);
++  if (s_prevIsolate == isolate)
++    return;
++
++  if (current)
++    Dart_ExitIsolate();
++  if (s_prevIsolate)
++    Dart_EnterIsolate(s_prevIsolate);
++}
++
++void FlutterEngineDartEnterScope() {
++  Dart_EnterScope();
++}
++
++void FlutterEngineDartExitScope() {
++  if (Dart_CurrentIsolate())
++    Dart_ExitScope();
++}
++
++#include "render_message_loop.h"
++extern fml::RefPtr<fml::TaskRunner> g_rasterRunnder;
++namespace fml {
++  BoolCallback isInRenderThread;
++}
++
++static std::unique_ptr<fml::RenderMessageLoop> s_render_loop;
++void FlutterEngineInitRenderLoop(BoolCallback isInRenderThreadCallback) {
++  fml::isInRenderThread = isInRenderThreadCallback;
++  s_render_loop.reset(new fml::RenderMessageLoop);
++  g_rasterRunnder = s_render_loop->GetTaskRunner();
++  fml::MessageLoop::SetCurrent(s_render_loop.get());
++}
++
++void FlutterEngineRunRenderLoop() {
++  fml::MessageLoop::SetCurrent(
++      s_render_loop.get());  // Unreal may recreate rendering thread
++
++  s_render_loop->RunExpiredTasksNow();
++}
++
++void FlutterEngineResetContext(FLUTTER_API_SYMBOL(FlutterEngine) engine) {
++  if (engine == nullptr) {
++    LOG_EMBEDDER_ERROR(kInvalidArguments, "Invalid engine handle.");
++  }
++
++  fml::MessageLoop::SetCurrent(
++      s_render_loop.get());  // Unreal may recreate rendering thread
++
++  flutter::EmbedderEngine* embedder_engine =
++      reinterpret_cast<flutter::EmbedderEngine*>(engine);
++
++  auto rasterizer = embedder_engine->GetShell().GetRasterizer();
++  if (rasterizer->GetGrContext()->backend() == GrBackendApi::kOpenGL) {
++    rasterizer->GetGrContext()->resetContext();
++  }
++}
++
++FlutterEngineResult FlutterEngineDrawLastTree(FLUTTER_API_SYMBOL(FlutterEngine)
++                                                  engine) {
++  if (engine == nullptr) {
++    return LOG_EMBEDDER_ERROR(kInvalidArguments, "Invalid engine handle.");
++  }
++
++  fml::MessageLoop::SetCurrent(
++      s_render_loop.get());  // Unreal may recreate rendering thread
++
++  flutter::EmbedderEngine* embedder_engine =
++      reinterpret_cast<flutter::EmbedderEngine*>(engine);
++
++  auto rasterizer = embedder_engine->GetShell().GetRasterizer();
++  if (rasterizer->HaveLastLayerTrees()) {
++    std::unique_ptr<flutter::FrameTimingsRecorder> frame_timings_recorder =
++        std::make_unique<flutter::FrameTimingsRecorder>();
++
++    const auto now = fml::TimePoint::Now();
++    frame_timings_recorder->RecordVsync(now, now);
++    frame_timings_recorder->RecordBuildStart(now);
++    frame_timings_recorder->RecordBuildEnd(now);
++
++    rasterizer->DrawLastLayerTrees(std::move(frame_timings_recorder));
++  }
++
++  return kSuccess;
++}
++
++FLUTTER_EXPORT
++void FlutterEngineResetLastTree(FLUTTER_API_SYMBOL(FlutterEngine) engine) {
++  if (engine == nullptr) {
++    LOG_EMBEDDER_ERROR(kInvalidArguments, "Invalid engine handle.");
++  }
++
++  fml::MessageLoop::SetCurrent(
++      s_render_loop.get());  // Unreal may recreate rendering thread
++
++  flutter::EmbedderEngine* embedder_engine =
++      reinterpret_cast<flutter::EmbedderEngine*>(engine);
++
++  auto rasterizer = embedder_engine->GetShell().GetRasterizer();
++  rasterizer->ResetLastLayerTrees();
++}
++
+ FlutterEngineResult FlutterEngineGetProcAddresses(
+     FlutterEngineProcTable* table) {
+   if (!table) {
+diff --git a/shell/platform/embedder/embedder.h b/shell/platform/embedder/embedder.h
+index 9e9b875a2c..065e5c1ad7 100644
+--- a/shell/platform/embedder/embedder.h
++++ b/shell/platform/embedder/embedder.h
+@@ -84,6 +84,8 @@ typedef enum {
+   /// macOS version >= 10.14
+   kMetal,
+   kVulkan,
++  kD3D11,
++  kD3D12,
+ } FlutterRendererType;
+ 
+ /// Additional accessibility features that may be enabled by the platform.
+@@ -656,6 +658,36 @@ typedef struct {
+   FlutterFrameBufferWithDamageCallback populate_existing_damage;
+ } FlutterOpenGLRendererConfig;
+ 
++typedef void* FlutterD3D11DeviceHandle;
++typedef void* FlutterD3D11DeviceContextHandle;
++typedef void* FlutterD3D11Texture;
++
++typedef FlutterD3D11Texture (*FlutterD3D11BackBufferCallback)();
++
++typedef struct {
++  size_t struct_size;
++  FlutterD3D11BackBufferCallback getBackBuffer;
++  BoolCallback present;
++  FlutterD3D11DeviceHandle device;
++  FlutterD3D11DeviceContextHandle deviceContext;
++} FlutterD3D11RendererConfig;
++
++typedef void* FlutterAdapterHandle;
++typedef void* FlutterD3D12DeviceHandle;
++typedef void* FlutterD3D12CommandQueueHandle;
++typedef void* FlutterD3D12Resource;
++
++typedef FlutterD3D12Resource (*FlutterD3D12BackBufferCallback)();
++
++typedef struct {
++  size_t struct_size;
++  FlutterD3D12BackBufferCallback getBackBuffer;
++  BoolCallback present;
++  FlutterAdapterHandle adapter;
++  FlutterD3D12DeviceHandle device;
++  FlutterD3D12CommandQueueHandle commandQueue;
++} FlutterD3D12RendererConfig;
++
+ /// Alias for id<MTLDevice>.
+ typedef const void* FlutterMetalDeviceHandle;
+ 
+@@ -894,6 +926,8 @@ typedef struct {
+     FlutterSoftwareRendererConfig software;
+     FlutterMetalRendererConfig metal;
+     FlutterVulkanRendererConfig vulkan;
++    FlutterD3D11RendererConfig d3d11;
++    FlutterD3D12RendererConfig d3d12;
+   };
+ } FlutterRendererConfig;
+ 
+@@ -3255,6 +3289,63 @@ FlutterEngineResult FlutterEngineSetNextFrameCallback(
+     VoidCallback callback,
+     void* user_data);
+ 
++FLUTTER_EXPORT
++void FlutterEngineRunLoop();
++
++FLUTTER_EXPORT
++void FlutterEngineNativeBinding();
++
++typedef void* (*FfiNativeResolver)(const char* name, uintptr_t args_n);
++
++FLUTTER_EXPORT
++void FlutterEngineSetFfiNativeResolver(FfiNativeResolver resolver);
++
++FLUTTER_EXPORT
++void FlutterEngineClearPointerEvent();
++
++FLUTTER_EXPORT
++bool FlutterEngineGetPointerEventHandled();
++
++FLUTTER_EXPORT
++void FlutterEnginePrintDartStackTrace();
++
++FLUTTER_EXPORT
++void FlutterEnginePrintStackTrace();
++
++FLUTTER_EXPORT
++void FlutterEnginePrintStackTraceWithLocals();
++
++FLUTTER_EXPORT
++void FlutterEngineDartEnterIsolate();
++
++FLUTTER_EXPORT
++void FlutterEngineDartExitIsolate();
++
++FLUTTER_EXPORT
++void FlutterEngineDartEnterScope();
++
++FLUTTER_EXPORT
++void FlutterEngineDartExitScope();
++
++FLUTTER_EXPORT
++void FlutterEngineExecuteCommand(const char* command, void* arg);
++
++FLUTTER_EXPORT
++void FlutterEngineInitRenderLoop(BoolCallback isInRenderThreadCallback);
++
++FLUTTER_EXPORT
++void FlutterEngineRunRenderLoop();
++
++FLUTTER_EXPORT
++void FlutterEngineResetContext(FLUTTER_API_SYMBOL(FlutterEngine) engine);
++
++FLUTTER_EXPORT
++FlutterEngineResult FlutterEngineDrawLastTree(FLUTTER_API_SYMBOL(FlutterEngine)
++                                                  engine);
++
++FLUTTER_EXPORT
++void FlutterEngineResetLastTree(FLUTTER_API_SYMBOL(FlutterEngine) engine);
++
+ #endif  // !FLUTTER_ENGINE_NO_PROTOTYPES
+ 
+ // Typedefs for the function pointers in FlutterEngineProcTable.
+diff --git a/shell/platform/embedder/embedder_platform_message_response.cc b/shell/platform/embedder/embedder_platform_message_response.cc
+index 6da7262a78..204c50aac1 100644
+--- a/shell/platform/embedder/embedder_platform_message_response.cc
++++ b/shell/platform/embedder/embedder_platform_message_response.cc
+@@ -23,7 +23,7 @@ void EmbedderPlatformMessageResponse::Complete(
+     return;
+   }
+ 
+-  runner_->PostTask(
++  fml::TaskRunner::RunNowOrPostTask(runner_,
+       // The static leak checker gets confused by the use of fml::MakeCopyable.
+       // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+       fml::MakeCopyable([data = std::move(data), callback = callback_]() {
+diff --git a/shell/platform/embedder/embedder_surface_d3d11.cc b/shell/platform/embedder/embedder_surface_d3d11.cc
+new file mode 100644
+index 0000000000..1f36431923
+--- /dev/null
++++ b/shell/platform/embedder/embedder_surface_d3d11.cc
+@@ -0,0 +1,93 @@
++
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "flutter/shell/platform/embedder/embedder_surface_d3d11.h"
++
++#include <utility>
++
++#include "flutter/shell/common/shell_io_manager.h"
++#include "include/gpu/ganesh/GrDirectContext.h"
++#include "shell/gpu/gpu_surface_d3d11.h"
++#include "shell/gpu/gpu_surface_d3d11_delegate.h"
++
++#include "include/gpu/ganesh/GrBackendSurface.h"
++#include "include/gpu/ganesh/d3d11/GrD3D11Types.h"
++#include "include/gpu/ganesh/d3d/GrD3DBackendContext.h"
++
++namespace flutter {
++
++EmbedderSurfaceD3D11::EmbedderSurfaceD3D11(
++    ID3D11Device* device,
++    ID3D11DeviceContext* deviceContext,
++    const D3D11DispatchTable& d3d11_dispatch_table,
++    std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder)
++    : device_(device),
++      deviceContext_(deviceContext),
++      d3d11_dispatch_table_(d3d11_dispatch_table),
++      external_view_embedder_(std::move(external_view_embedder)) {
++  main_context_ = CreateGrContext(device, deviceContext, ContextType::kRender);
++  // TODO(96954): Add a second (optional) queue+family index to the Embedder API
++  //              to allow embedders to specify a dedicated transfer queue for
++  //              use by the resource context. Queue families with graphics
++  //              capability can always be used for memory transferring, but it
++  //              would be advantageous to use a dedicated transter queue here.
++  //resource_context_ = CreateGrContext(device, deviceContext, ContextType::kResource);
++  //valid_ = main_context_ && resource_context_;
++  valid_ = main_context_ ? true : false;
++}
++
++EmbedderSurfaceD3D11::~EmbedderSurfaceD3D11() {
++  if (main_context_) {
++    main_context_->releaseResourcesAndAbandonContext();
++  }
++  if (resource_context_) {
++    resource_context_->releaseResourcesAndAbandonContext();
++  }
++}
++
++// |GPUSurfaceD3D11Delegate|
++ID3D11Texture2D* EmbedderSurfaceD3D11::AcquireImage(const SkISize& size) {
++  return d3d11_dispatch_table_.get_back_buffer(size);
++}
++
++// |GPUSurfaceD3D11Delegate|
++bool EmbedderSurfaceD3D11::Present() {
++  return d3d11_dispatch_table_.present();
++}
++
++// |EmbedderSurface|
++bool EmbedderSurfaceD3D11::IsValid() const {
++  return valid_;
++}
++
++// |EmbedderSurface|
++std::unique_ptr<Surface> EmbedderSurfaceD3D11::CreateGPUSurface() {
++  const bool render_to_surface = !external_view_embedder_;
++  return std::make_unique<GPUSurfaceD3D11>(this, main_context_,
++                                            render_to_surface);
++}
++
++// |EmbedderSurface|
++sk_sp<GrDirectContext> EmbedderSurfaceD3D11::CreateResourceContext() const {
++  return resource_context_;
++}
++
++sk_sp<GrDirectContext> EmbedderSurfaceD3D11::CreateGrContext(
++    ID3D11Device* device,
++    ID3D11DeviceContext* deviceContext,
++    ContextType context_type) const {
++
++  GrD3DBackendContext backendContext;
++  backendContext.fD3D11Device = device;
++  backendContext.fD3D11DeviceContext = deviceContext;
++
++  GrContextOptions options =
++      MakeDefaultContextOptions(context_type, GrBackendApi::kDirect3D);
++  options.fReduceOpsTaskSplitting = GrContextOptions::Enable::kNo;
++
++  return GrDirectContext::MakeDirect3D(backendContext, options);
++}
++
++}  // namespace flutter
+diff --git a/shell/platform/embedder/embedder_surface_d3d11.h b/shell/platform/embedder/embedder_surface_d3d11.h
+new file mode 100644
+index 0000000000..3442634162
+--- /dev/null
++++ b/shell/platform/embedder/embedder_surface_d3d11.h
+@@ -0,0 +1,73 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef FLUTTER_SHELL_PLATFORM_EMBEDDER_EMBEDDER_SURFACE_D3D11_H_
++#define FLUTTER_SHELL_PLATFORM_EMBEDDER_EMBEDDER_SURFACE_D3D11_H_
++
++#include "flutter/fml/macros.h"
++#include "flutter/shell/gpu/gpu_surface_d3d11.h"
++#include "flutter/shell/platform/embedder/embedder_external_view_embedder.h"
++#include "flutter/shell/platform/embedder/embedder_surface.h"
++#include "shell/common/context_options.h"
++#include "shell/gpu/gpu_surface_d3d11_delegate.h"
++#include "shell/platform/embedder/embedder.h"
++
++struct ID3D11Device;
++struct ID3D11DeviceContext;
++struct IDXGIAdapter1;
++
++namespace flutter {
++
++class EmbedderSurfaceD3D11 final : public EmbedderSurface,
++                                    public GPUSurfaceD3D11Delegate {
++ public:
++  struct D3D11DispatchTable {
++    std::function<ID3D11Texture2D* (const SkISize& frame_size)>
++        get_back_buffer;  // required
++    std::function<bool()>
++        present;  // required
++  };
++
++  EmbedderSurfaceD3D11(
++      ID3D11Device* device,
++      ID3D11DeviceContext* deviceContext,
++      const D3D11DispatchTable& d3d11_dispatch_table,
++      std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder);
++
++  ~EmbedderSurfaceD3D11() override;
++
++  // |GPUSurfaceD3D11Delegate|
++  ID3D11Texture2D* AcquireImage(const SkISize& size) override;
++
++  // |GPUSurfaceD3D11Delegate|
++  bool Present() override;
++
++ private:
++  bool valid_ = false;
++  ID3D11Device* device_;
++  ID3D11DeviceContext* deviceContext_;
++  D3D11DispatchTable d3d11_dispatch_table_;
++  std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder_;
++  sk_sp<GrDirectContext> main_context_;
++  sk_sp<GrDirectContext> resource_context_;
++
++  // |EmbedderSurface|
++  bool IsValid() const override;
++
++  // |EmbedderSurface|
++  std::unique_ptr<Surface> CreateGPUSurface() override;
++
++  // |EmbedderSurface|
++  sk_sp<GrDirectContext> CreateResourceContext() const override;
++
++  sk_sp<GrDirectContext> CreateGrContext(ID3D11Device* device,
++                                         ID3D11DeviceContext* deviceContext,
++                                         ContextType context_type) const;
++
++  FML_DISALLOW_COPY_AND_ASSIGN(EmbedderSurfaceD3D11);
++};
++
++}  // namespace flutter
++
++#endif  // FLUTTER_SHELL_PLATFORM_EMBEDDER_EMBEDDER_SURFACE_D3D11_H_
+diff --git a/shell/platform/embedder/embedder_surface_d3d12.cc b/shell/platform/embedder/embedder_surface_d3d12.cc
+new file mode 100644
+index 0000000000..c38be8f375
+--- /dev/null
++++ b/shell/platform/embedder/embedder_surface_d3d12.cc
+@@ -0,0 +1,97 @@
++
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "flutter/shell/platform/embedder/embedder_surface_d3d12.h"
++
++#include <utility>
++
++#include "flutter/shell/common/shell_io_manager.h"
++#include "include/gpu/ganesh/GrDirectContext.h"
++#include "shell/gpu/gpu_surface_d3d12.h"
++#include "shell/gpu/gpu_surface_d3d12_delegate.h"
++
++#include "include/gpu/ganesh/GrDirectContext.h"
++#include "include/gpu/ganesh/GrBackendSurface.h"
++#include "include/gpu/ganesh/d3d/GrD3DBackendContext.h"
++
++namespace flutter {
++
++EmbedderSurfaceD3D12::EmbedderSurfaceD3D12(
++    IDXGIAdapter1* adapter,
++    ID3D12Device* device,
++    ID3D12CommandQueue* queue,
++    const D3D12DispatchTable& d3d12_dispatch_table,
++    std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder)
++    : adapter_(adapter),
++      device_(device),
++      queue_(queue),
++      d3d12_dispatch_table_(d3d12_dispatch_table),
++      external_view_embedder_(std::move(external_view_embedder)) {
++  main_context_ = CreateGrContext(adapter, device, queue, ContextType::kRender);
++  // TODO(96954): Add a second (optional) queue+family index to the Embedder API
++  //              to allow embedders to specify a dedicated transfer queue for
++  //              use by the resource context. Queue families with graphics
++  //              capability can always be used for memory transferring, but it
++  //              would be advantageous to use a dedicated transter queue here.
++  //resource_context_ = CreateGrContext(adapter, device, queue, ContextType::kResource);
++  //valid_ = main_context_ && resource_context_;
++  valid_ = main_context_ ? true : false;
++}
++
++EmbedderSurfaceD3D12::~EmbedderSurfaceD3D12() {
++  if (main_context_) {
++    main_context_->releaseResourcesAndAbandonContext();
++  }
++  if (resource_context_) {
++    resource_context_->releaseResourcesAndAbandonContext();
++  }
++}
++
++// |GPUSurfaceD3D12Delegate|
++ID3D12Resource* EmbedderSurfaceD3D12::AcquireImage(const SkISize& size) {
++  return d3d12_dispatch_table_.get_back_buffer(size);
++}
++
++// |GPUSurfaceD3D12Delegate|
++bool EmbedderSurfaceD3D12::Present() {
++  return d3d12_dispatch_table_.present();
++}
++
++// |EmbedderSurface|
++bool EmbedderSurfaceD3D12::IsValid() const {
++  return valid_;
++}
++
++// |EmbedderSurface|
++std::unique_ptr<Surface> EmbedderSurfaceD3D12::CreateGPUSurface() {
++  const bool render_to_surface = !external_view_embedder_;
++  return std::make_unique<GPUSurfaceD3D12>(this, main_context_,
++                                            render_to_surface);
++}
++
++// |EmbedderSurface|
++sk_sp<GrDirectContext> EmbedderSurfaceD3D12::CreateResourceContext() const {
++  return resource_context_;
++}
++
++sk_sp<GrDirectContext> EmbedderSurfaceD3D12::CreateGrContext(
++    IDXGIAdapter1* adapter,
++    ID3D12Device* device,
++    ID3D12CommandQueue* queue,
++    ContextType context_type) const {
++
++  GrD3DBackendContext backendContext;
++  backendContext.fAdapter.retain(adapter);
++  backendContext.fDevice.retain(device);
++  backendContext.fQueue.retain(queue);
++
++  GrContextOptions options =
++      MakeDefaultContextOptions(context_type, GrBackendApi::kDirect3D);
++  options.fReduceOpsTaskSplitting = GrContextOptions::Enable::kNo;
++
++  return GrDirectContext::MakeDirect3D(backendContext, options);
++}
++
++}  // namespace flutter
+diff --git a/shell/platform/embedder/embedder_surface_d3d12.h b/shell/platform/embedder/embedder_surface_d3d12.h
+new file mode 100644
+index 0000000000..c8cb303f72
+--- /dev/null
++++ b/shell/platform/embedder/embedder_surface_d3d12.h
+@@ -0,0 +1,76 @@
++// Copyright 2013 The Flutter Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef FLUTTER_SHELL_PLATFORM_EMBEDDER_EMBEDDER_SURFACE_D3D12_H_
++#define FLUTTER_SHELL_PLATFORM_EMBEDDER_EMBEDDER_SURFACE_D3D12_H_
++
++#include "flutter/fml/macros.h"
++#include "flutter/shell/gpu/gpu_surface_d3d12.h"
++#include "flutter/shell/platform/embedder/embedder_external_view_embedder.h"
++#include "flutter/shell/platform/embedder/embedder_surface.h"
++#include "shell/common/context_options.h"
++#include "shell/gpu/gpu_surface_d3d12_delegate.h"
++#include "shell/platform/embedder/embedder.h"
++
++struct IDXGIAdapter1;
++struct ID3D12Device;
++struct ID3D12CommandQueue;
++
++namespace flutter {
++
++class EmbedderSurfaceD3D12 final : public EmbedderSurface,
++                                    public GPUSurfaceD3D12Delegate {
++ public:
++  struct D3D12DispatchTable {
++    std::function<ID3D12Resource*(const SkISize& frame_size)>
++        get_back_buffer;  // required
++    std::function<bool()>
++        present;  // required
++  };
++
++  EmbedderSurfaceD3D12(
++      IDXGIAdapter1* adapter,
++      ID3D12Device* device,
++      ID3D12CommandQueue* queue,
++      const D3D12DispatchTable& d3d12_dispatch_table,
++      std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder);
++
++  ~EmbedderSurfaceD3D12() override;
++
++  // |GPUSurfaceD3D12Delegate|
++  ID3D12Resource* AcquireImage(const SkISize& size) override;
++
++  // |GPUSurfaceD3D11Delegate|
++  bool Present() override;
++
++ private:
++  bool valid_ = false;
++  IDXGIAdapter1* adapter_;
++  ID3D12Device* device_;
++  ID3D12CommandQueue* queue_;
++  D3D12DispatchTable d3d12_dispatch_table_;
++  std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder_;
++  sk_sp<GrDirectContext> main_context_;
++  sk_sp<GrDirectContext> resource_context_;
++
++  // |EmbedderSurface|
++  bool IsValid() const override;
++
++  // |EmbedderSurface|
++  std::unique_ptr<Surface> CreateGPUSurface() override;
++
++  // |EmbedderSurface|
++  sk_sp<GrDirectContext> CreateResourceContext() const override;
++
++  sk_sp<GrDirectContext> CreateGrContext(IDXGIAdapter1* adapter, 
++                                         ID3D12Device* device,
++                                         ID3D12CommandQueue* queue,
++                                         ContextType context_type) const;
++
++  FML_DISALLOW_COPY_AND_ASSIGN(EmbedderSurfaceD3D12);
++};
++
++}  // namespace flutter
++
++#endif  // FLUTTER_SHELL_PLATFORM_EMBEDDER_EMBEDDER_SURFACE_D3D12_H_
+diff --git a/shell/platform/embedder/embedder_thread_host.cc b/shell/platform/embedder/embedder_thread_host.cc
+index 7cca136462..b77bb5da58 100644
+--- a/shell/platform/embedder/embedder_thread_host.cc
++++ b/shell/platform/embedder/embedder_thread_host.cc
+@@ -11,6 +11,8 @@
+ #include "flutter/fml/message_loop.h"
+ #include "flutter/shell/platform/embedder/embedder_struct_macros.h"
+ 
++fml::RefPtr<fml::TaskRunner> g_rasterRunnder;
++
+ namespace flutter {
+ 
+ //------------------------------------------------------------------------------
+@@ -127,7 +129,30 @@ EmbedderThreadHost::CreateEmbedderManagedThreadHost(
+     const FlutterCustomTaskRunners* custom_task_runners,
+     const flutter::ThreadConfigSetter& config_setter) {
+   if (custom_task_runners == nullptr) {
+-    return nullptr;
++    fml::MessageLoop::EnsureInitializedForCurrentThread();
++    auto task_runner = fml::MessageLoop::GetCurrent().GetTaskRunner();
++
++    auto thread_host_config = ThreadHost::ThreadHostConfig(config_setter);
++    thread_host_config.SetIOConfig(MakeThreadConfig(
++        ThreadHost::Type::kIo, fml::Thread::ThreadPriority::kBackground));
++
++    // thread_host_config.SetUIConfig(MakeThreadConfig(
++    //     ThreadHost::Type::kUi, fml::Thread::ThreadPriority::kDisplay));
++
++    ThreadHost thread_host(thread_host_config);
++    flutter::TaskRunners task_runners(
++        kFlutterThreadName,
++        task_runner,                                      // platform
++        g_rasterRunnder.get() ? g_rasterRunnder : task_runner,  // raster
++        task_runner,  // ui thread_host.ui_thread->GetTaskRunner()
++        thread_host.io_thread->GetTaskRunner()  // io (always engine managed)
++    );
++
++    std::set<fml::RefPtr<EmbedderTaskRunner>> embedder_task_runners;
++    auto embedder_host = std::make_unique<EmbedderThreadHost>(
++        std::move(thread_host), std::move(task_runners),
++        std::move(embedder_task_runners));
++    return embedder_host;
+   }
+ 
+   auto thread_host_config = ThreadHost::ThreadHostConfig(config_setter);
+diff --git a/shell/platform/embedder/platform_view_embedder.cc b/shell/platform/embedder/platform_view_embedder.cc
+index 01bfbe97cb..61d4b2cf22 100644
+--- a/shell/platform/embedder/platform_view_embedder.cc
++++ b/shell/platform/embedder/platform_view_embedder.cc
+@@ -20,7 +20,7 @@ class PlatformViewEmbedder::EmbedderPlatformMessageHandler
+         platform_task_runner_(std::move(platform_task_runner)) {}
+ 
+   virtual void HandlePlatformMessage(std::unique_ptr<PlatformMessage> message) {
+-    platform_task_runner_->PostTask(fml::MakeCopyable(
++    fml::TaskRunner::RunNowOrPostTask(platform_task_runner_, fml::MakeCopyable(
+         [parent = parent_, message = std::move(message)]() mutable {
+           if (parent) {
+             parent->HandlePlatformMessage(std::move(message));
+@@ -110,6 +110,36 @@ PlatformViewEmbedder::PlatformViewEmbedder(
+       platform_dispatch_table_(std::move(platform_dispatch_table)) {}
+ #endif
+ 
++#ifdef _WIN32
++PlatformViewEmbedder::PlatformViewEmbedder(
++    PlatformView::Delegate& delegate,
++    const flutter::TaskRunners& task_runners,
++    std::unique_ptr<EmbedderSurfaceD3D11> embedder_surface,
++    PlatformDispatchTable platform_dispatch_table,
++    std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder)
++    : PlatformView(delegate, task_runners),
++      external_view_embedder_(std::move(external_view_embedder)),
++      embedder_surface_(std::move(embedder_surface)),
++      platform_message_handler_(new EmbedderPlatformMessageHandler(
++          GetWeakPtr(),
++          task_runners.GetPlatformTaskRunner())),
++      platform_dispatch_table_(std::move(platform_dispatch_table)) {}
++
++PlatformViewEmbedder::PlatformViewEmbedder(
++    PlatformView::Delegate& delegate,
++    const flutter::TaskRunners& task_runners,
++    std::unique_ptr<EmbedderSurfaceD3D12> embedder_surface,
++    PlatformDispatchTable platform_dispatch_table,
++    std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder)
++    : PlatformView(delegate, task_runners),
++      external_view_embedder_(std::move(external_view_embedder)),
++      embedder_surface_(std::move(embedder_surface)),
++      platform_message_handler_(new EmbedderPlatformMessageHandler(
++          GetWeakPtr(),
++          task_runners.GetPlatformTaskRunner())),
++      platform_dispatch_table_(std::move(platform_dispatch_table)) {}
++#endif
++
+ PlatformViewEmbedder::~PlatformViewEmbedder() = default;
+ 
+ void PlatformViewEmbedder::UpdateSemantics(
+diff --git a/shell/platform/embedder/platform_view_embedder.h b/shell/platform/embedder/platform_view_embedder.h
+index f443058940..62dae45bfd 100644
+--- a/shell/platform/embedder/platform_view_embedder.h
++++ b/shell/platform/embedder/platform_view_embedder.h
+@@ -28,6 +28,11 @@
+ #include "flutter/shell/platform/embedder/embedder_surface_vulkan.h"
+ #endif
+ 
++#ifdef _WIN32
++#include "flutter/shell/platform/embedder/embedder_surface_d3d11.h"
++#include "flutter/shell/platform/embedder/embedder_surface_d3d12.h"
++#endif
++
+ namespace flutter {
+ 
+ class PlatformViewEmbedder final : public PlatformView {
+@@ -93,6 +98,22 @@ class PlatformViewEmbedder final : public PlatformView {
+       std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder);
+ #endif
+ 
++#ifdef _WIN32
++  PlatformViewEmbedder(
++      PlatformView::Delegate& delegate,
++      const flutter::TaskRunners& task_runners,
++      std::unique_ptr<EmbedderSurfaceD3D11> embedder_surface,
++      PlatformDispatchTable platform_dispatch_table,
++      std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder);
++
++  PlatformViewEmbedder(
++      PlatformView::Delegate& delegate,
++      const flutter::TaskRunners& task_runners,
++      std::unique_ptr<EmbedderSurfaceD3D12> embedder_surface,
++      PlatformDispatchTable platform_dispatch_table,
++      std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder);
++#endif
++
+   ~PlatformViewEmbedder() override;
+ 
+   // |PlatformView|
+diff --git a/shell/platform/embedder/render_message_loop.h b/shell/platform/embedder/render_message_loop.h
+new file mode 100644
+index 0000000000..71e40325ed
+--- /dev/null
++++ b/shell/platform/embedder/render_message_loop.h
+@@ -0,0 +1,39 @@
++
++#ifndef RENDER_MESSAGE_LOOP_H
++#define RENDER_MESSAGE_LOOP_H
++
++#include "flutter/fml/memory/ref_counted.h"
++#include "flutter/fml/memory/ref_ptr.h"
++#include "flutter/fml/message_loop_impl.h"
++#include "flutter/fml/task_runner.h"
++
++namespace fml {
++
++class RenderMessageLoop : public fml::MessageLoop {
++ public:
++  RenderMessageLoop();
++};
++
++class RenderTaskRunner : public fml::TaskRunner {
++ public:
++  explicit RenderTaskRunner(fml::RefPtr<fml::MessageLoopImpl> loop);
++  virtual bool RunsTasksOnCurrentThread();
++};
++
++RenderTaskRunner::RenderTaskRunner(fml::RefPtr<fml::MessageLoopImpl> loop)
++    : fml::TaskRunner(loop) {}
++
++extern BoolCallback isInRenderThread;
++bool RenderTaskRunner::RunsTasksOnCurrentThread() {
++  return isInRenderThread(nullptr);
++}
++
++RenderMessageLoop::RenderMessageLoop() 
++    :fml::MessageLoop() 
++{
++  task_runner_ = fml::MakeRefCounted<RenderTaskRunner>(loop_);
++}
++
++}  // namespace fml
++
++#endif
+diff --git a/skia/BUILD.gn b/skia/BUILD.gn
+index 2b3f81f385..bfea546d22 100644
+--- a/skia/BUILD.gn
++++ b/skia/BUILD.gn
+@@ -5,6 +5,9 @@
+ _skia_root = "//flutter/third_party/skia"
+ 
+ import("$_skia_root/gn/shared_sources.gni")
++if (is_win) {
++  import("$_skia_root/gn/gpu_d3d11.gni")
++}
+ import("$_skia_root/gn/skia.gni")
+ import("$_skia_root/gn/toolchain/wasm.gni")
+ import("flutter_defines.gni")
+@@ -383,6 +386,11 @@ optional("gpu_shared") {
+     public_defines += [ "SK_METAL" ]
+     sources += skia_shared_mtl_sources
+   }
++  
++  if (skia_use_direct3d) {
++    sources += skia_sksl_hlsl_sources
++    deps += [ "//third_party/spirv_cross_flutter" ]
++  }
+ }
+ 
+ optional("gpu") {
+@@ -483,6 +491,25 @@ optional("gpu") {
+     }
+     cflags_objcc += [ "-fobjc-arc" ]
+   }
++  
++  if (skia_use_direct3d) {
++    public_defines += [ "SK_DIRECT3D" ]
++    public += skia_d3d11_public
++    include_dirs = ["$_skia_root/third_party/externals/d3d12allocator/src"]
++    sources += ["$_skia_root/third_party/externals/d3d12allocator/src/D3D12MemAlloc.cpp"]
++    sources += skia_direct3d_sources
++    sources += skia_d3d11_sources
++    if (skia_enable_direct3d_debug_layer) {
++      public_defines += [ "SK_ENABLE_D3D_DEBUG_LAYER" ]
++    }
++    libs += [
++      "d3d12.lib",
++      "dxgi.lib",
++      "d3dcompiler.lib",
++      "d3d11.lib",
++      "dxguid.lib",
++    ]
++  }
+ 
+   if (is_debug) {
+     public_defines += [ "SK_ENABLE_DUMP_GPU" ]

@@ -222,6 +222,8 @@ void Dart_OnGameViewportResize(int x, int y, int width, int height)
 }
 
 void initFlutterUnreal() {
+  print("Dart Version: ${Platform.version}\n");
+  print("Flutter Version: 3.27.1\n");
   try {
     onHitTestResult = hitTestCallback;
 

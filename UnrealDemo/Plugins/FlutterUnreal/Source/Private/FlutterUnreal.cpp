@@ -92,12 +92,14 @@ void FFlutterUnrealModule::OnViewportCreated()
 	{
 		check(false);
 	}
+    
+    UE_LOG(LogTemp, Log, TEXT("RHIName %s %d"), *RHIName, (int)g_flutterRendererType);
 
 	if (FlutterEngineDLLHandle == nullptr)
 	{
 		FString DLLPath = IPluginManager::Get().FindPlugin("FlutterUnreal")->GetBaseDir() + "/Source/ThirdParty/flutter_engine/flutter_engine.dll";
 		DLLPath = FPaths::ConvertRelativePathToFull(DLLPath);
-		UE_LOG(LogTemp, Warning, TEXT("DLLPath %s"), *DLLPath);
+		UE_LOG(LogTemp, Log, TEXT("DLLPath %s"), *DLLPath);
 
 		FlutterEngineDLLHandle = FPlatformProcess::GetDllHandle(*DLLPath);
 	}

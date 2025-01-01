@@ -1102,13 +1102,7 @@ int _ElevatedButton_styleFrom(VoidPtr L) {
 
     InteractiveInkFeatureFactory? splashFactory = _getNamedParam<InteractiveInkFeatureFactory>(L, top_, 'splashFactory');
 
-    Color? primary = _getNamedParam<Color>(L, top_, 'primary');
-
-    Color? onPrimary = _getNamedParam<Color>(L, top_, 'onPrimary');
-
-    Color? onSurface = _getNamedParam<Color>(L, top_, 'onSurface');
-
-    var result_ = ElevatedButton.styleFrom(foregroundColor: foregroundColor, backgroundColor: backgroundColor, disabledForegroundColor: disabledForegroundColor, disabledBackgroundColor: disabledBackgroundColor, shadowColor: shadowColor, surfaceTintColor: surfaceTintColor, elevation: elevation, textStyle: textStyle, padding: padding, minimumSize: minimumSize, fixedSize: fixedSize, maximumSize: maximumSize, side: side, shape: shape, enabledMouseCursor: enabledMouseCursor, disabledMouseCursor: disabledMouseCursor, visualDensity: visualDensity, tapTargetSize: tapTargetSize, animationDuration: animationDuration, enableFeedback: enableFeedback, alignment: alignment, splashFactory: splashFactory, primary: primary, onPrimary: onPrimary, onSurface: onSurface);
+    var result_ = ElevatedButton.styleFrom(foregroundColor: foregroundColor, backgroundColor: backgroundColor, disabledForegroundColor: disabledForegroundColor, disabledBackgroundColor: disabledBackgroundColor, shadowColor: shadowColor, surfaceTintColor: surfaceTintColor, elevation: elevation, textStyle: textStyle, padding: padding, minimumSize: minimumSize, fixedSize: fixedSize, maximumSize: maximumSize, side: side, shape: shape, enabledMouseCursor: enabledMouseCursor, disabledMouseCursor: disabledMouseCursor, visualDensity: visualDensity, tapTargetSize: tapTargetSize, animationDuration: animationDuration, enableFeedback: enableFeedback, alignment: alignment, splashFactory: splashFactory);
 
     return luaPush(L, result_);
 
@@ -2189,23 +2183,7 @@ int _ThemeData_copyWith(VoidPtr L) {
 
     TooltipThemeData? tooltipTheme = _getNamedParam<TooltipThemeData>(L, top_, 'tooltipTheme');
 
-    bool? fixTextFieldOutlineLabel = _getNamedParam<bool>(L, top_, 'fixTextFieldOutlineLabel');
-
-    Brightness? primaryColorBrightness = _getNamedParam<Brightness>(L, top_, 'primaryColorBrightness');
-
-    AndroidOverscrollIndicator? androidOverscrollIndicator = _getNamedParam<AndroidOverscrollIndicator>(L, top_, 'androidOverscrollIndicator');
-
-    Color? toggleableActiveColor = _getNamedParam<Color>(L, top_, 'toggleableActiveColor');
-
-    Color? selectedRowColor = _getNamedParam<Color>(L, top_, 'selectedRowColor');
-
-    Color? errorColor = _getNamedParam<Color>(L, top_, 'errorColor');
-
-    Color? backgroundColor = _getNamedParam<Color>(L, top_, 'backgroundColor');
-
-    Color? bottomAppBarColor = _getNamedParam<Color>(L, top_, 'bottomAppBarColor');
-
-    var result_ = self.copyWith(applyElevationOverlayColor: applyElevationOverlayColor, cupertinoOverrideTheme: cupertinoOverrideTheme, extensions: extensions, inputDecorationTheme: inputDecorationTheme, materialTapTargetSize: materialTapTargetSize, pageTransitionsTheme: pageTransitionsTheme, platform: platform, scrollbarTheme: scrollbarTheme, splashFactory: splashFactory, useMaterial3: useMaterial3, visualDensity: visualDensity, brightness: brightness, canvasColor: canvasColor, cardColor: cardColor, colorScheme: colorScheme, dialogBackgroundColor: dialogBackgroundColor, disabledColor: disabledColor, dividerColor: dividerColor, focusColor: focusColor, highlightColor: highlightColor, hintColor: hintColor, hoverColor: hoverColor, indicatorColor: indicatorColor, primaryColor: primaryColor, primaryColorDark: primaryColorDark, primaryColorLight: primaryColorLight, scaffoldBackgroundColor: scaffoldBackgroundColor, secondaryHeaderColor: secondaryHeaderColor, shadowColor: shadowColor, splashColor: splashColor, unselectedWidgetColor: unselectedWidgetColor, iconTheme: iconTheme, primaryIconTheme: primaryIconTheme, primaryTextTheme: primaryTextTheme, textTheme: textTheme, typography: typography, appBarTheme: appBarTheme, badgeTheme: badgeTheme, bannerTheme: bannerTheme, bottomAppBarTheme: bottomAppBarTheme, bottomNavigationBarTheme: bottomNavigationBarTheme, bottomSheetTheme: bottomSheetTheme, buttonBarTheme: buttonBarTheme, buttonTheme: buttonTheme, cardTheme: cardTheme, checkboxTheme: checkboxTheme, chipTheme: chipTheme, dataTableTheme: dataTableTheme, dialogTheme: dialogTheme, dividerTheme: dividerTheme, drawerTheme: drawerTheme, elevatedButtonTheme: elevatedButtonTheme, expansionTileTheme: expansionTileTheme, filledButtonTheme: filledButtonTheme, floatingActionButtonTheme: floatingActionButtonTheme, iconButtonTheme: iconButtonTheme, listTileTheme: listTileTheme, menuBarTheme: menuBarTheme, menuButtonTheme: menuButtonTheme, menuTheme: menuTheme, navigationBarTheme: navigationBarTheme, navigationDrawerTheme: navigationDrawerTheme, navigationRailTheme: navigationRailTheme, outlinedButtonTheme: outlinedButtonTheme, popupMenuTheme: popupMenuTheme, progressIndicatorTheme: progressIndicatorTheme, radioTheme: radioTheme, segmentedButtonTheme: segmentedButtonTheme, sliderTheme: sliderTheme, snackBarTheme: snackBarTheme, switchTheme: switchTheme, tabBarTheme: tabBarTheme, textButtonTheme: textButtonTheme, textSelectionTheme: textSelectionTheme, timePickerTheme: timePickerTheme, toggleButtonsTheme: toggleButtonsTheme, tooltipTheme: tooltipTheme, fixTextFieldOutlineLabel: fixTextFieldOutlineLabel, primaryColorBrightness: primaryColorBrightness, androidOverscrollIndicator: androidOverscrollIndicator, toggleableActiveColor: toggleableActiveColor, selectedRowColor: selectedRowColor, errorColor: errorColor, backgroundColor: backgroundColor, bottomAppBarColor: bottomAppBarColor);
+    var result_ = self.copyWith(applyElevationOverlayColor: applyElevationOverlayColor, cupertinoOverrideTheme: cupertinoOverrideTheme, extensions: extensions, inputDecorationTheme: inputDecorationTheme, materialTapTargetSize: materialTapTargetSize, pageTransitionsTheme: pageTransitionsTheme, platform: platform, scrollbarTheme: scrollbarTheme, splashFactory: splashFactory, useMaterial3: useMaterial3, visualDensity: visualDensity, brightness: brightness, canvasColor: canvasColor, cardColor: cardColor, colorScheme: colorScheme, dialogBackgroundColor: dialogBackgroundColor, disabledColor: disabledColor, dividerColor: dividerColor, focusColor: focusColor, highlightColor: highlightColor, hintColor: hintColor, hoverColor: hoverColor, indicatorColor: indicatorColor, primaryColor: primaryColor, primaryColorDark: primaryColorDark, primaryColorLight: primaryColorLight, scaffoldBackgroundColor: scaffoldBackgroundColor, secondaryHeaderColor: secondaryHeaderColor, shadowColor: shadowColor, splashColor: splashColor, unselectedWidgetColor: unselectedWidgetColor, iconTheme: iconTheme, primaryIconTheme: primaryIconTheme, primaryTextTheme: primaryTextTheme, textTheme: textTheme, typography: typography, appBarTheme: appBarTheme, badgeTheme: badgeTheme, bannerTheme: bannerTheme, bottomAppBarTheme: bottomAppBarTheme, bottomNavigationBarTheme: bottomNavigationBarTheme, bottomSheetTheme: bottomSheetTheme, buttonBarTheme: buttonBarTheme, buttonTheme: buttonTheme, cardTheme: cardTheme, checkboxTheme: checkboxTheme, chipTheme: chipTheme, dataTableTheme: dataTableTheme, dialogTheme: dialogTheme, dividerTheme: dividerTheme, drawerTheme: drawerTheme, elevatedButtonTheme: elevatedButtonTheme, expansionTileTheme: expansionTileTheme, filledButtonTheme: filledButtonTheme, floatingActionButtonTheme: floatingActionButtonTheme, iconButtonTheme: iconButtonTheme, listTileTheme: listTileTheme, menuBarTheme: menuBarTheme, menuButtonTheme: menuButtonTheme, menuTheme: menuTheme, navigationBarTheme: navigationBarTheme, navigationDrawerTheme: navigationDrawerTheme, navigationRailTheme: navigationRailTheme, outlinedButtonTheme: outlinedButtonTheme, popupMenuTheme: popupMenuTheme, progressIndicatorTheme: progressIndicatorTheme, radioTheme: radioTheme, segmentedButtonTheme: segmentedButtonTheme, sliderTheme: sliderTheme, snackBarTheme: snackBarTheme, switchTheme: switchTheme, tabBarTheme: tabBarTheme, textButtonTheme: textButtonTheme, textSelectionTheme: textSelectionTheme, timePickerTheme: timePickerTheme, toggleButtonsTheme: toggleButtonsTheme, tooltipTheme: tooltipTheme);
 
     return luaPush(L, result_);
 
@@ -2557,8 +2535,6 @@ int _ColorScheme_fromSwatch(VoidPtr L) {
     MaterialColor? primarySwatch = _getNamedParam<MaterialColor>(L, top_, 'primarySwatch');
     primarySwatch ??= Colors.blue;
 
-    Color? primaryColorDark = _getNamedParam<Color>(L, top_, 'primaryColorDark');
-
     Color? accentColor = _getNamedParam<Color>(L, top_, 'accentColor');
 
     Color? cardColor = _getNamedParam<Color>(L, top_, 'cardColor');
@@ -2570,7 +2546,7 @@ int _ColorScheme_fromSwatch(VoidPtr L) {
     Brightness? brightness = _getNamedParam<Brightness>(L, top_, 'brightness');
     brightness ??= Brightness.light;
 
-    var result_ = ColorScheme.fromSwatch(primarySwatch: primarySwatch, primaryColorDark: primaryColorDark, accentColor: accentColor, cardColor: cardColor, backgroundColor: backgroundColor, errorColor: errorColor, brightness: brightness);
+    var result_ = ColorScheme.fromSwatch(primarySwatch: primarySwatch, accentColor: accentColor, cardColor: cardColor, backgroundColor: backgroundColor, errorColor: errorColor, brightness: brightness);
 
     return luaPush(L, result_);
 
@@ -2913,11 +2889,7 @@ int _ColorScheme_copyWith(VoidPtr L) {
 
     Color? surfaceTint = _getNamedParam<Color>(L, top_, 'surfaceTint');
 
-    Color? primaryVariant = _getNamedParam<Color>(L, top_, 'primaryVariant');
-
-    Color? secondaryVariant = _getNamedParam<Color>(L, top_, 'secondaryVariant');
-
-    var result_ = self.copyWith(brightness: brightness, primary: primary, onPrimary: onPrimary, primaryContainer: primaryContainer, onPrimaryContainer: onPrimaryContainer, secondary: secondary, onSecondary: onSecondary, secondaryContainer: secondaryContainer, onSecondaryContainer: onSecondaryContainer, tertiary: tertiary, onTertiary: onTertiary, tertiaryContainer: tertiaryContainer, onTertiaryContainer: onTertiaryContainer, error: error, onError: onError, errorContainer: errorContainer, onErrorContainer: onErrorContainer, background: background, onBackground: onBackground, surface: surface, onSurface: onSurface, surfaceVariant: surfaceVariant, onSurfaceVariant: onSurfaceVariant, outline: outline, outlineVariant: outlineVariant, shadow: shadow, scrim: scrim, inverseSurface: inverseSurface, onInverseSurface: onInverseSurface, inversePrimary: inversePrimary, surfaceTint: surfaceTint, primaryVariant: primaryVariant, secondaryVariant: secondaryVariant);
+    var result_ = self.copyWith(brightness: brightness, primary: primary, onPrimary: onPrimary, primaryContainer: primaryContainer, onPrimaryContainer: onPrimaryContainer, secondary: secondary, onSecondary: onSecondary, secondaryContainer: secondaryContainer, onSecondaryContainer: onSecondaryContainer, tertiary: tertiary, onTertiary: onTertiary, tertiaryContainer: tertiaryContainer, onTertiaryContainer: onTertiaryContainer, error: error, onError: onError, errorContainer: errorContainer, onErrorContainer: onErrorContainer, background: background, onBackground: onBackground, surface: surface, onSurface: onSurface, surfaceVariant: surfaceVariant, onSurfaceVariant: onSurfaceVariant, outline: outline, outlineVariant: outlineVariant, shadow: shadow, scrim: scrim, inverseSurface: inverseSurface, onInverseSurface: onInverseSurface, inversePrimary: inversePrimary, surfaceTint: surfaceTint);
 
     return luaPush(L, result_);
 

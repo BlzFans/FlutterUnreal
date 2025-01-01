@@ -1,0 +1,27 @@
+ packages/flutter/lib/src/gestures/binding.dart | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/packages/flutter/lib/src/gestures/binding.dart b/packages/flutter/lib/src/gestures/binding.dart
+index 467d3546fc..bc75fb9f47 100644
+--- a/packages/flutter/lib/src/gestures/binding.dart
++++ b/packages/flutter/lib/src/gestures/binding.dart
+@@ -37,6 +37,9 @@ export 'pointer_signal_resolver.dart' show PointerSignalResolver;
+ 
+ typedef _HandleSampleTimeChangedCallback = void Function();
+ 
++typedef HitTestResultCallback = bool Function(PointerEvent event, HitTestResult? hitTestResult);
++HitTestResultCallback? onHitTestResult;
++
+ /// Class that implements clock used for sampling.
+ class SamplingClock {
+   /// Returns current time.
+@@ -421,6 +424,9 @@ mixin GestureBinding on BindingBase implements HitTestable, HitTestDispatcher, H
+       }
+       return true;
+     }());
++
++    onHitTestResult?.call(event, hitTestResult);
++
+     if (hitTestResult != null ||
+         event is PointerAddedEvent ||
+         event is PointerRemovedEvent) {
