@@ -560,8 +560,8 @@ void FlutterTextInputPlugin::SendStateUpdate(const FlutterTextInputModel& model)
     editing_state.AddMember(kComposingExtentKey, -1, allocator);
     editing_state.AddMember(kSelectionAffinityKey, kAffinityDownstream,
         allocator);
-    editing_state.AddMember(kSelectionBaseKey, selection.base(), allocator);
-    editing_state.AddMember(kSelectionExtentKey, selection.extent(), allocator);
+    editing_state.AddMember(kSelectionBaseKey, (int)selection.base(), allocator);
+    editing_state.AddMember(kSelectionExtentKey, (int)selection.extent(), allocator);
     editing_state.AddMember(kSelectionIsDirectionalKey, false, allocator);
     editing_state.AddMember(
         kTextKey, rapidjson::Value(model.GetText(), allocator).Move(), allocator);
