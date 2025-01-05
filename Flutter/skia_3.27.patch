@@ -82,7 +82,7 @@ index 0000000000..ea3608e23d
 +  "$_src/gpu/ganesh/d3d11/GrD3D11UniformDataManager.h",
 +]
 diff --git a/gn/skia.gni b/gn/skia.gni
-index 0912d15e49..39505e9968 100644
+index 0912d15e49..d64bd745dc 100644
 --- a/gn/skia.gni
 +++ b/gn/skia.gni
 @@ -40,7 +40,7 @@ declare_args() {
@@ -90,7 +90,7 @@ index 0912d15e49..39505e9968 100644
    skia_use_client_icu = false
    skia_use_dawn = false
 -  skia_use_direct3d = false
-+  skia_use_direct3d = true
++  skia_use_direct3d = is_win
    skia_use_egl = false
    skia_use_epoxy_egl = false
    skia_use_expat = !is_wasm
@@ -99,7 +99,7 @@ index 0912d15e49..39505e9968 100644
      skia_use_vulkan = true
    } else {
 -    skia_use_vulkan = false
-+    skia_use_vulkan = true
++    skia_use_vulkan = is_win || is_android
    }
  
    skia_build_fuzzers = is_clang && is_linux && target_cpu == "x64"

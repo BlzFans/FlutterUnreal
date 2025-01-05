@@ -688,7 +688,7 @@ index 38c7e2db98..b7680a833f 100644
      public_configs += [
        ":embedder_gpu_configuration_config",
 diff --git a/shell/platform/embedder/embedder.cc b/shell/platform/embedder/embedder.cc
-index 2adf56c592..8351665300 100644
+index 2adf56c592..4cbf2fea4f 100644
 --- a/shell/platform/embedder/embedder.cc
 +++ b/shell/platform/embedder/embedder.cc
 @@ -24,6 +24,12 @@
@@ -854,10 +854,11 @@ index 2adf56c592..8351665300 100644
  static flutter::Shell::CreateCallback<flutter::PlatformView>
  InferSoftwarePlatformViewCreationCallback(
      const FlutterRendererConfig* config,
-@@ -763,6 +898,14 @@ InferPlatformViewCreationCallback(
+@@ -763,6 +898,16 @@ InferPlatformViewCreationCallback(
        return InferVulkanPlatformViewCreationCallback(
            config, user_data, platform_dispatch_table,
            std::move(external_view_embedder));
++#if FML_OS_WIN
 +    case kD3D11:
 +      return InferD3D11PlatformViewCreationCallback(
 +          config, user_data, platform_dispatch_table,
@@ -866,10 +867,11 @@ index 2adf56c592..8351665300 100644
 +      return InferD3D12PlatformViewCreationCallback(
 +          config, user_data, platform_dispatch_table,
 +          std::move(external_view_embedder));
++#endif
      default:
        return nullptr;
    }
-@@ -3503,6 +3646,230 @@ FlutterEngineResult FlutterEngineSetNextFrameCallback(
+@@ -3503,6 +3648,233 @@ FlutterEngineResult FlutterEngineSetNextFrameCallback(
    return kSuccess;
  }
  
@@ -913,8 +915,11 @@ index 2adf56c592..8351665300 100644
 +    return;
 +  }
 +  tonic::DartState::Scope scope(dart_state);
-+  Dart_SetField(flutter_unreal_library.value(),
++  Dart_Handle result = Dart_SetField(flutter_unreal_library.value(),
 +                tonic::ToDart("pointerEventHandled"), Dart_False());
++  if (Dart_IsError(result)) {
++    Dart_PropagateError(result);
++  }
 +}
 +
 +bool FlutterEngineGetPointerEventHandled() {
@@ -1779,7 +1784,7 @@ index 0000000000..71e40325ed
 +
 +#endif
 diff --git a/skia/BUILD.gn b/skia/BUILD.gn
-index 2b3f81f385..bfea546d22 100644
+index 2b3f81f385..4d8d92dcfe 100644
 --- a/skia/BUILD.gn
 +++ b/skia/BUILD.gn
 @@ -5,6 +5,9 @@
@@ -1804,11 +1809,12 @@ index 2b3f81f385..bfea546d22 100644
  }
  
  optional("gpu") {
-@@ -483,6 +491,25 @@ optional("gpu") {
+@@ -483,6 +491,26 @@ optional("gpu") {
      }
      cflags_objcc += [ "-fobjc-arc" ]
    }
 +  
++  print("skia_use_direct3d", skia_use_direct3d)
 +  if (skia_use_direct3d) {
 +    public_defines += [ "SK_DIRECT3D" ]
 +    public += skia_d3d11_public
