@@ -72,21 +72,21 @@ extern struct _FlutterEngine* g_flutterEngine;
 
 struct Cpp2DartFunction
 {
-    Cpp2DartFunction(void* function, const char* name);
+    Cpp2DartFunction(const void* function, const char* name);
 
-    void* function;
+    const void* function;
     const char* name;
     Cpp2DartFunction* next;
 };
 
-#define Cpp2Dart(name) static Cpp2DartFunction cpp2dart_##name##_entry(name, #name);
+#define Cpp2Dart(name) static Cpp2DartFunction cpp2dart_##name##_entry((const void*)name, #name);
 
 class Dart2CppFunction
 {
 public:
-    Dart2CppFunction(void* functionPPtr, const char* funcName);
+    Dart2CppFunction(const void* functionPPtr, const char* funcName);
 
-    void* dartFunctionPPtr;
+    const void* dartFunctionPPtr;
     const char* name;
     Dart2CppFunction* next;
 };

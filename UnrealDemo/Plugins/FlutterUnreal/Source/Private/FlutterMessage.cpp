@@ -5,7 +5,7 @@
 #include "FlutterLua.h"
 
 #define RAPIDJSON_HAS_STDSTRING 1
-#if _MSC_VER
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4996)
 #pragma warning(disable: 5054) //deprecated between enumerations of different types
@@ -30,9 +30,9 @@ void MessageCallback(const FlutterPlatformMessage* message, void* userData)
 {
     bool responsed = false;
 
-    if (strcmp(message->channel, TextInputPlugin::GetChannelName()) == 0)
+    if (strcmp(message->channel, FlutterTextInputPlugin::GetChannelName()) == 0)
     {
-        TextInputPlugin::GetInstance().HandleMessage(message);
+        FlutterTextInputPlugin::GetInstance().HandleMessage(message);
         sendEmptyResponse(message);
         return;
     }

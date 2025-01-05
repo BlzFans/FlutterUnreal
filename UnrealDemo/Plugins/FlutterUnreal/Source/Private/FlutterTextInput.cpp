@@ -9,7 +9,7 @@
 #include <string>
 
 #define RAPIDJSON_HAS_STDSTRING 1
-#if _MSC_VER
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4996)
 #pragma warning(disable: 5054) //deprecated between enumerations of different types
@@ -59,13 +59,13 @@ bool IsTrailingSurrogate(char32_t code_point) {
     return (code_point & 0xFFFFFC00) == 0xDC00;
 }
 
-TextInputModel::TextInputModel() = default;
+FlutterTextInputModel::FlutterTextInputModel() = default;
 
-TextInputModel::~TextInputModel() = default;
+FlutterTextInputModel::~FlutterTextInputModel() = default;
 
-bool TextInputModel::SetText(const std::string& text,
-    const TextRange& selection,
-    const TextRange& composing_range) {
+bool FlutterTextInputModel::SetText(const std::string& text,
+    const FlutterTextRange& selection,
+    const FlutterTextRange& composing_range) {
     text_ = Utf8ToUtf16(text);
     if (!text_range().Contains(selection) ||
         !text_range().Contains(composing_range)) {
@@ -78,7 +78,7 @@ bool TextInputModel::SetText(const std::string& text,
     return true;
 }
 
-bool TextInputModel::SetSelection(const TextRange& range) {
+bool FlutterTextInputModel::SetSelection(const FlutterTextRange& range) {
     if (composing_ && !range.collapsed()) {
         return false;
     }
@@ -89,22 +89,22 @@ bool TextInputModel::SetSelection(const TextRange& range) {
     return true;
 }
 
-bool TextInputModel::SetComposingRange(const TextRange& range,
+bool FlutterTextInputModel::SetComposingRange(const FlutterTextRange& range,
     size_t cursor_offset) {
     if (!composing_ || !text_range().Contains(range)) {
         return false;
     }
     composing_range_ = range;
-    selection_ = TextRange(range.start() + cursor_offset);
+    selection_ = FlutterTextRange(range.start() + cursor_offset);
     return true;
 }
 
-void TextInputModel::BeginComposing() {
+void FlutterTextInputModel::BeginComposing() {
     composing_ = true;
-    composing_range_ = TextRange(selection_.start());
+    composing_range_ = FlutterTextRange(selection_.start());
 }
 
-void TextInputModel::UpdateComposingText(const std::u16string& text) {
+void FlutterTextInputModel::UpdateComposingText(const std::u16string& text) {
     // Preserve selection if we get a no-op update to the composing region.
     if (text.length() == 0 && composing_range_.collapsed()) {
         return;
@@ -112,34 +112,34 @@ void TextInputModel::UpdateComposingText(const std::u16string& text) {
     DeleteSelected();
     text_.replace(composing_range_.start(), composing_range_.length(), text);
     composing_range_.set_end(composing_range_.start() + text.length());
-    selection_ = TextRange(composing_range_.end());
+    selection_ = FlutterTextRange(composing_range_.end());
 }
 
-void TextInputModel::UpdateComposingText(const std::string& text) {
+void FlutterTextInputModel::UpdateComposingText(const std::string& text) {
     UpdateComposingText(Utf8ToUtf16(text));
 }
 
-void TextInputModel::CommitComposing() {
+void FlutterTextInputModel::CommitComposing() {
     // Preserve selection if no composing text was entered.
     if (composing_range_.collapsed()) {
         return;
     }
-    composing_range_ = TextRange(composing_range_.end());
+    composing_range_ = FlutterTextRange(composing_range_.end());
     selection_ = composing_range_;
 }
 
-void TextInputModel::EndComposing() {
+void FlutterTextInputModel::EndComposing() {
     composing_ = false;
-    composing_range_ = TextRange(0);
+    composing_range_ = FlutterTextRange(0);
 }
 
-bool TextInputModel::DeleteSelected() {
+bool FlutterTextInputModel::DeleteSelected() {
     if (selection_.collapsed()) {
         return false;
     }
     size_t start = selection_.start();
     text_.erase(start, selection_.length());
-    selection_ = TextRange(start);
+    selection_ = FlutterTextRange(start);
     if (composing_) {
         // This occurs only immediately after composing has begun with a selection.
         composing_range_ = selection_;
@@ -147,7 +147,7 @@ bool TextInputModel::DeleteSelected() {
     return true;
 }
 
-void TextInputModel::AddCodePoint(char32_t c) {
+void FlutterTextInputModel::AddCodePoint(char32_t c) {
     if (c <= 0xFFFF) {
         AddText(std::u16string({ static_cast<char16_t>(c) }));
     }
@@ -162,24 +162,24 @@ void TextInputModel::AddCodePoint(char32_t c) {
     }
 }
 
-void TextInputModel::AddText(const std::u16string& text) {
+void FlutterTextInputModel::AddText(const std::u16string& text) {
     DeleteSelected();
     if (composing_) {
         // Delete the current composing text, set the cursor to composing start.
         text_.erase(composing_range_.start(), composing_range_.length());
-        selection_ = TextRange(composing_range_.start());
+        selection_ = FlutterTextRange(composing_range_.start());
         composing_range_.set_end(composing_range_.start() + text.length());
     }
     size_t position = selection_.position();
     text_.insert(position, text);
-    selection_ = TextRange(position + text.length());
+    selection_ = FlutterTextRange(position + text.length());
 }
 
-void TextInputModel::AddText(const std::string& text) {
+void FlutterTextInputModel::AddText(const std::string& text) {
     AddText(Utf8ToUtf16(text));
 }
 
-bool TextInputModel::Backspace() {
+bool FlutterTextInputModel::Backspace() {
     if (DeleteSelected()) {
         return true;
     }
@@ -188,7 +188,7 @@ bool TextInputModel::Backspace() {
     if (position != editable_range().start()) {
         int count = IsTrailingSurrogate(text_.at(position - 1)) ? 2 : 1;
         text_.erase(position - count, count);
-        selection_ = TextRange(position - count);
+        selection_ = FlutterTextRange(position - count);
         if (composing_) {
             composing_range_.set_end(composing_range_.end() - count);
         }
@@ -197,7 +197,7 @@ bool TextInputModel::Backspace() {
     return false;
 }
 
-bool TextInputModel::Delete() {
+bool FlutterTextInputModel::Delete() {
     if (DeleteSelected()) {
         return true;
     }
@@ -214,7 +214,7 @@ bool TextInputModel::Delete() {
     return false;
 }
 
-bool TextInputModel::DeleteSurrounding(int offset_from_cursor, int count) {
+bool FlutterTextInputModel::DeleteSurrounding(int offset_from_cursor, int count) {
     size_t max_pos = editable_range().end();
     size_t start = selection_.extent();
     if (offset_from_cursor < 0) {
@@ -247,7 +247,7 @@ bool TextInputModel::DeleteSurrounding(int offset_from_cursor, int count) {
     text_.erase(start, deleted_length);
 
     // Cursor moves only if deleted area is before it.
-    selection_ = TextRange(offset_from_cursor <= 0 ? start : selection_.start());
+    selection_ = FlutterTextRange(offset_from_cursor <= 0 ? start : selection_.start());
 
     // Adjust composing range.
     if (composing_) {
@@ -256,79 +256,79 @@ bool TextInputModel::DeleteSurrounding(int offset_from_cursor, int count) {
     return true;
 }
 
-bool TextInputModel::MoveCursorToBeginning() {
+bool FlutterTextInputModel::MoveCursorToBeginning() {
     size_t min_pos = editable_range().start();
     if (selection_.collapsed() && selection_.position() == min_pos) {
         return false;
     }
-    selection_ = TextRange(min_pos);
+    selection_ = FlutterTextRange(min_pos);
     return true;
 }
 
-bool TextInputModel::MoveCursorToEnd() {
+bool FlutterTextInputModel::MoveCursorToEnd() {
     size_t max_pos = editable_range().end();
     if (selection_.collapsed() && selection_.position() == max_pos) {
         return false;
     }
-    selection_ = TextRange(max_pos);
+    selection_ = FlutterTextRange(max_pos);
     return true;
 }
 
-bool TextInputModel::SelectToBeginning() {
+bool FlutterTextInputModel::SelectToBeginning() {
     size_t min_pos = editable_range().start();
     if (selection_.collapsed() && selection_.position() == min_pos) {
         return false;
     }
-    selection_ = TextRange(selection_.base(), min_pos);
+    selection_ = FlutterTextRange(selection_.base(), min_pos);
     return true;
 }
 
-bool TextInputModel::SelectToEnd() {
+bool FlutterTextInputModel::SelectToEnd() {
     size_t max_pos = editable_range().end();
     if (selection_.collapsed() && selection_.position() == max_pos) {
         return false;
     }
-    selection_ = TextRange(selection_.base(), max_pos);
+    selection_ = FlutterTextRange(selection_.base(), max_pos);
     return true;
 }
 
-bool TextInputModel::MoveCursorForward() {
+bool FlutterTextInputModel::MoveCursorForward() {
     // If there's a selection, move to the end of the selection.
     if (!selection_.collapsed()) {
-        selection_ = TextRange(selection_.end());
+        selection_ = FlutterTextRange(selection_.end());
         return true;
     }
     // Otherwise, move the cursor forward.
     size_t position = selection_.position();
     if (position != editable_range().end()) {
         int count = IsLeadingSurrogate(text_.at(position)) ? 2 : 1;
-        selection_ = TextRange(position + count);
+        selection_ = FlutterTextRange(position + count);
         return true;
     }
     return false;
 }
 
-bool TextInputModel::MoveCursorBack() {
+bool FlutterTextInputModel::MoveCursorBack() {
     // If there's a selection, move to the beginning of the selection.
     if (!selection_.collapsed()) {
-        selection_ = TextRange(selection_.start());
+        selection_ = FlutterTextRange(selection_.start());
         return true;
     }
     // Otherwise, move the cursor backward.
     size_t position = selection_.position();
     if (position != editable_range().start()) {
         int count = IsTrailingSurrogate(text_.at(position - 1)) ? 2 : 1;
-        selection_ = TextRange(position - count);
+        selection_ = FlutterTextRange(position - count);
         return true;
     }
     return false;
 }
 
-std::string TextInputModel::GetText() const {
+std::string FlutterTextInputModel::GetText() const {
     return Utf16ToUtf8(text_);
 }
 
-int TextInputModel::GetCursorOffset() const {
+int FlutterTextInputModel::GetCursorOffset() const {
     // Measure the length of the current text up to the selection extent.
     // There is probably a much more efficient way of doing this.
     auto leading_text = text_.substr(0, selection_.extent());
@@ -365,18 +365,18 @@ static constexpr char kChannelName[] = "flutter/textinput";
 static constexpr char kBadArgumentError[] = "Bad Arguments";
 static constexpr char kInternalConsistencyError[] = "Internal Consistency Error";
 
-TextInputPlugin& TextInputPlugin::GetInstance()
+FlutterTextInputPlugin& FlutterTextInputPlugin::GetInstance()
 {
-    static TextInputPlugin sInstance;
+    static FlutterTextInputPlugin sInstance;
     return sInstance;
 }
 
-const char* TextInputPlugin::GetChannelName()
+const char* FlutterTextInputPlugin::GetChannelName()
 {
     return kChannelName;
 }
 
-void TextInputPlugin::CharHook(unsigned int code_point) {
+void FlutterTextInputPlugin::CharHook(unsigned int code_point) {
     if (active_model_ == nullptr) {
         return;
     }
@@ -384,7 +384,7 @@ void TextInputPlugin::CharHook(unsigned int code_point) {
     SendStateUpdate(*active_model_);
 }
 
-void TextInputPlugin::KeyboardHook(uint16_t key, bool down, bool repeat) {
+void FlutterTextInputPlugin::KeyboardHook(uint16_t key, bool down, bool repeat) {
     if (active_model_ == nullptr) {
         return;
     }
@@ -428,10 +428,10 @@ void TextInputPlugin::KeyboardHook(uint16_t key, bool down, bool repeat) {
     }
 }
 
-TextInputPlugin::TextInputPlugin() = default;
-TextInputPlugin::~TextInputPlugin() = default;
+FlutterTextInputPlugin::FlutterTextInputPlugin() = default;
+FlutterTextInputPlugin::~FlutterTextInputPlugin() = default;
 
-void TextInputPlugin::HandleMessage(const FlutterPlatformMessage* message)
+void FlutterTextInputPlugin::HandleMessage(const FlutterPlatformMessage* message)
 {
     rapidjson::Document document;
     document.Parse((const char*)message->message, message->message_size);
@@ -487,7 +487,7 @@ void TextInputPlugin::HandleMessage(const FlutterPlatformMessage* message)
                 input_type_ = input_type_json->value.GetString();
             }
         }
-        active_model_ = std::make_unique<TextInputModel>();
+        active_model_ = std::make_unique<FlutterTextInputModel>();
     }
     else if (method.compare(kSetEditingStateMethod) == 0) {
         if (active_model_ == nullptr) {
@@ -514,7 +514,7 @@ void TextInputPlugin::HandleMessage(const FlutterPlatformMessage* message)
             base = extent = 0;
         }
         active_model_->SetText(text->value.GetString());
-        active_model_->SetSelection(TextRange(base, extent));
+        active_model_->SetSelection(FlutterTextRange(base, extent));
     }
     else {
         //check(false, TEXT("NotImplemented"));
@@ -549,12 +549,12 @@ static void sendMessage(const char* method, rapidjson::Document* document)
     flutterSendMessage(kChannelName, buffer_start, (uint32_t)buffer.GetSize());
 }
 
-void TextInputPlugin::SendStateUpdate(const TextInputModel& model) {
+void FlutterTextInputPlugin::SendStateUpdate(const FlutterTextInputModel& model) {
     auto args = std::make_unique<rapidjson::Document>(rapidjson::kArrayType);
     auto& allocator = args->GetAllocator();
     args->PushBack(client_id_, allocator);
 
-    TextRange selection = model.selection();
+    FlutterTextRange selection = model.selection();
     rapidjson::Value editing_state(rapidjson::kObjectType);
     editing_state.AddMember(kComposingBaseKey, -1, allocator);
     editing_state.AddMember(kComposingExtentKey, -1, allocator);
@@ -570,7 +570,7 @@ void TextInputPlugin::SendStateUpdate(const TextInputModel& model) {
     sendMessage(kUpdateEditingStateMethod, args.get());
 }
 
-void TextInputPlugin::EnterPressed(TextInputModel* model) {
+void FlutterTextInputPlugin::EnterPressed(FlutterTextInputModel* model) {
     /*if (input_type_ == kMultilineInputType) {
         model->AddCodePoint('\n');
         SendStateUpdate(*model);

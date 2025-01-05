@@ -176,7 +176,7 @@ FlutterEngineAOTData LoadAotData(const char* aot_data_path) {
 }
 
 static Cpp2DartFunction* s_cpp2dartFunctionList = nullptr;
-Cpp2DartFunction::Cpp2DartFunction(void* function, const char* name)
+Cpp2DartFunction::Cpp2DartFunction(const void* function, const char* name)
     :function(function)
     ,name(name)
     ,next(s_cpp2dartFunctionList)
@@ -184,7 +184,7 @@ Cpp2DartFunction::Cpp2DartFunction(void* function, const char* name)
     s_cpp2dartFunctionList = this;
 }
 
-static void* ResolveFfiNativeFunction(const char* name, uintptr_t args) {
+static const void* ResolveFfiNativeFunction(const char* name, uintptr_t args) {
     //UE_LOG(LogTemp, Warning, TEXT("ResolveFfiNativeFunction %s %d"), UTF8_TO_TCHAR(name), (int)args);
     for (Cpp2DartFunction* entry = s_cpp2dartFunctionList; entry; entry = entry->next)
     {
@@ -198,7 +198,7 @@ static void* ResolveFfiNativeFunction(const char* name, uintptr_t args) {
 
 
 static Dart2CppFunction* s_dart2cppFunctionList = nullptr;
-Dart2CppFunction::Dart2CppFunction(void* functionPPtr, const char* funcName)
+Dart2CppFunction::Dart2CppFunction(const void* functionPPtr, const char* funcName)
     :dartFunctionPPtr(functionPPtr)
     ,name(funcName)
     ,next(s_dart2cppFunctionList)
@@ -220,7 +220,7 @@ static uint64_t getTimeStamp()
 void FlutterRootIsolateCreateCallback(void* userData)
 {
     FlutterEngineNativeBinding();
-    FlutterEngineSetFfiNativeResolver(ResolveFfiNativeFunction);
+    FlutterEngineSetFfiNativeResolver((FfiNativeResolver)ResolveFfiNativeFunction);
 
     UE_LOG(LogTemp, Log, TEXT("Flutter root isolate created"));
 }
@@ -692,7 +692,7 @@ bool flutterKeyEvent(uint16_t key, bool down, bool repeat)
     g_keyEventHandled = false;
     FlutterEngineSendKeyEvent(g_flutterEngine, &event, keyEventCallback, nullptr);
 
-    TextInputPlugin::GetInstance().KeyboardHook(key, down, repeat);
+    FlutterTextInputPlugin::GetInstance().KeyboardHook(key, down, repeat);
     if (flutterHasTextInput()) {
         return true;
     }
@@ -711,7 +711,7 @@ bool flutterCharEvent(uint16_t c)
 
     if (flutterHasTextInput())
     {
-        TextInputPlugin::GetInstance().CharHook(c);
+        FlutterTextInputPlugin::GetInstance().CharHook(c);
         return true;
     }
 
@@ -723,7 +723,7 @@ bool flutterHasTextInput()
     if (s_flutterDisableInput)
         return false;
 
-    return TextInputPlugin::GetInstance().IsActive();
+    return FlutterTextInputPlugin::GetInstance().IsActive();
 }
 
 static bool s_isMouseDown = false;

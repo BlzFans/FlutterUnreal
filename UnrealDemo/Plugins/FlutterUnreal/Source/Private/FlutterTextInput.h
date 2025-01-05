@@ -9,15 +9,15 @@
 // A |TextRange| describes a range of text with |base| and |extent| positions.
 // In the case where |base| == |extent|, the range is said to be collapsed, and
 // when |base| > |extent|, the range is said to be reversed.
-class TextRange {
+class FlutterTextRange {
 public:
-    explicit TextRange(size_t position) : base_(position), extent_(position) {}
-    explicit TextRange(size_t base, size_t extent)
+    explicit FlutterTextRange(size_t position) : base_(position), extent_(position) {}
+    explicit FlutterTextRange(size_t base, size_t extent)
         : base_(base), extent_(extent) {}
-    TextRange(const TextRange&) = default;
-    TextRange& operator=(const TextRange&) = default;
+    FlutterTextRange(const FlutterTextRange&) = default;
+    FlutterTextRange& operator=(const FlutterTextRange&) = default;
 
-    virtual ~TextRange() = default;
+    virtual ~FlutterTextRange() = default;
 
     // The base position of the range.
     size_t base() const { return base_; }
@@ -80,11 +80,11 @@ public:
     }
 
     // Returns true if |range| is contained within the range.
-    bool Contains(const TextRange& range) const {
+    bool Contains(const FlutterTextRange& range) const {
         return range.start() >= start() && range.end() <= end();
     }
 
-    bool operator==(const TextRange& other) const {
+    bool operator==(const FlutterTextRange& other) const {
         return base_ == other.base_ && extent_ == other.extent_;
     }
 
@@ -96,18 +96,18 @@ private:
 // Handles underlying text input state, using a simple ASCII model.
 //
 // Ignores special states like "insert mode" for now.
-class TextInputModel {
+class FlutterTextInputModel {
 public:
-    TextInputModel();
-    virtual ~TextInputModel();
+    FlutterTextInputModel();
+    virtual ~FlutterTextInputModel();
 
     // Sets the text, as well as the selection and the composing region.
     //
     // This method is typically used to update the TextInputModel's editing state
     // when the Flutter framework sends its latest text editing state.
     bool SetText(const std::string& text,
-        const TextRange& selection = TextRange(0),
-        const TextRange& composing_range = TextRange(0));
+        const FlutterTextRange& selection = FlutterTextRange(0),
+        const FlutterTextRange& composing_range = FlutterTextRange(0));
 
     // Attempts to set the text selection.
     //
@@ -118,7 +118,7 @@ public:
     // To update both the text and the selection/composing range within the text
     // (for instance, when the framework sends its latest text editing state),
     // call |SetText| instead.
-    bool SetSelection(const TextRange& range);
+    bool SetSelection(const FlutterTextRange& range);
 
     // Attempts to set the composing range.
     //
@@ -128,7 +128,7 @@ public:
     // To update both the text and the selection/composing range within the text
     // (for instance, when the framework sends its latest text editing state),
     // call |SetText| instead.
-    bool SetComposingRange(const TextRange& range, size_t cursor_offset);
+    bool SetComposingRange(const FlutterTextRange& range, size_t cursor_offset);
 
     // Begins IME composing mode.
     //
@@ -271,15 +271,15 @@ public:
     int GetCursorOffset() const;
 
     // Returns a range covering the entire text.
-    TextRange text_range() const { return TextRange(0, text_.length()); }
+    FlutterTextRange text_range() const { return FlutterTextRange(0, text_.length()); }
 
     // The current selection.
-    TextRange selection() const { return selection_; }
+    FlutterTextRange selection() const { return selection_; }
 
     // The composing range.
     //
     // If not in composing mode, returns a collapsed range at position 0.
-    TextRange composing_range() const { return composing_range_; }
+    FlutterTextRange composing_range() const { return composing_range_; }
 
     // Whether multi-step input composing mode is active.
     bool composing() const { return composing_; }
@@ -295,24 +295,24 @@ private:
     //
     // In composing mode, returns the composing range; otherwise, returns a range
     // covering the entire text.
-    TextRange editable_range() const {
+    FlutterTextRange editable_range() const {
         return composing_ ? composing_range_ : text_range();
     }
 
     std::u16string text_;
-    TextRange selection_ = TextRange(0);
-    TextRange composing_range_ = TextRange(0);
+    FlutterTextRange selection_ = FlutterTextRange(0);
+    FlutterTextRange composing_range_ = FlutterTextRange(0);
     bool composing_ = false;
 };
 
-class TextInputPlugin {
+class FlutterTextInputPlugin {
 public:
-    static TextInputPlugin& GetInstance();
+    static FlutterTextInputPlugin& GetInstance();
     static const char* GetChannelName();
 
-    explicit TextInputPlugin();
+    explicit FlutterTextInputPlugin();
 
-    virtual ~TextInputPlugin();
+    virtual ~FlutterTextInputPlugin();
 
     // |KeyboardHookHandler|
     void KeyboardHook(uint16_t key, bool down, bool repeat);
@@ -326,16 +326,16 @@ public:
 
 private:
     // Sends the current state of the given model to the Flutter engine.
-    void SendStateUpdate(const TextInputModel& model);
+    void SendStateUpdate(const FlutterTextInputModel& model);
 
     // Sends an action triggered by the Enter key to the Flutter engine.
-    void EnterPressed(TextInputModel* model);
+    void EnterPressed(FlutterTextInputModel* model);
 
     // The active client id.
     int client_id_ = 0;
 
     // The active model. nullptr if not set.
-    std::unique_ptr<TextInputModel> active_model_;
+    std::unique_ptr<FlutterTextInputModel> active_model_;
 
     // Keyboard type of the client. See available options:
     // https://api.flutter.dev/flutter/services/TextInputType-class.html
@@ -346,7 +346,7 @@ private:
     std::string input_action_;
 };
 
-inline bool TextInputPlugin::IsActive()
+inline bool FlutterTextInputPlugin::IsActive()
 {
     return active_model_.get() != nullptr;
 }
