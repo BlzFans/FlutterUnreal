@@ -88,6 +88,10 @@ void FFlutterUnrealModule::OnViewportCreated()
 	{
 		g_flutterRendererType = kD3D12;
 	}
+	else if (RHIName == TEXT("Metal"))
+	{
+		g_flutterRendererType = kMetal;
+	}
 	else 
 	{
 		check(false);

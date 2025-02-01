@@ -119,6 +119,26 @@ public class FlutterUnreal : ModuleRules
 		{
             PrivateDependencyModuleNames.Add("MetalRHI");
         }
+        else if (Target.Platform == UnrealTargetPlatform.Mac)
+        {
+            PrivateDependencyModuleNames.Add("MetalRHI");
+            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/MacOS/libflutter_engine.dylib"));
+
+            PrivateIncludePaths.AddRange(
+                new string[] {
+                    Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/Apple/MetalRHI/Private")),
+                }
+            );
+
+#if !UE_5_0_OR_LATER
+            PrivateIncludePaths.AddRange(
+                new string[] {
+                    Path.GetFullPath(Path.Combine(EngineDirectory, "Source/ThirdParty/mtlpp/mtlpp-master-7efad47/src")),
+                    Path.GetFullPath(Path.Combine(ModuleDirectory, "ThirdParty/mtlpp/src")),
+                }
+            );
+#endif
+        }
 
         if (Target.bBuildEditor == true)
         {

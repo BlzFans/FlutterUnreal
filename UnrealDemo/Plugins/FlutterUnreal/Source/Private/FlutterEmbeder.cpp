@@ -123,6 +123,42 @@ void* D3D12GetBackBuffer()
     return BackBuffer;
 }
 
+#endif //PLATFORM_WINDOWS
+
+#if PLATFORM_IOS || PLATFORM_MAC
+#include "MetalRHI.h"
+#include "MetalRHIPrivate.h"
+
+class MyMetalDeviceContext : public FMetalDeviceContext
+{
+public:
+    FMetalCommandQueue& GetCommandQueue()
+    {
+        return CommandQueue;
+    }
+};
+
+static MyMetalDeviceContext& getMetalDeviceContext()
+{
+    FMetalRHICommandContext* Context = static_cast<FMetalRHICommandContext*>(RHIGetDefaultContext());
+    check(Context);
+    return ((MyMetalDeviceContext&)Context->GetInternalContext());
+}
+
+static void* GetMetalCommandQueue()
+{
+    FMetalDeviceContext& MetalContext = getMetalDeviceContext();
+    FMetalCommandQueue& MetalCommandQueue = getMetalDeviceContext().GetCommandQueue();
+    char* ptr = (char*)&MetalCommandQueue;
+    ptr += 8;  //MetalCommandQueue::CommandQueue
+    return (void*)ptr;
+}
+
+static FlutterMetalTexture get_next_drawable_callback(void* user_data, const FlutterFrameInfo* frame_info)
+{
+    return FlutterMetalTexture{};
+};
+
 #endif
 
 bool VulkanPresentCallback(void* user_data, const FlutterVulkanImage* image)
@@ -337,6 +373,26 @@ FlutterRendererConfig flutterGetRenderConfig()
         config.d3d12.present = D3D12PresentCallback;
     }
 #endif
+    else if (g_flutterRendererType == kMetal)
+    {
+#if PLATFORM_IOS || PLATFORM_MAC
+        config.type = kMetal;
+        config.metal.struct_size = sizeof(config.metal);
+
+        config.metal.device = GDynamicRHI->RHIGetNativeDevice();
+        config.metal.present_command_queue = GetMetalCommandQueue();
+        config.metal.get_next_drawable_callback = get_next_drawable_callback;
+        config.metal.present_drawable_callback = 
+            [](void* user_data, const FlutterMetalTexture* texture) -> bool {
+                return false;
+            };
+
+        config.metal.external_texture_frame_callback = 
+            [](void* user_data, int64_t texture_id, size_t width, size_t height, FlutterMetalExternalTexture* texture_out) -> bool {
+                return false;
+            };
+#endif
+    }
     else
     {
         UE_LOG(LogTemp, Error, TEXT("Not Implemented"));
