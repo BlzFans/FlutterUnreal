@@ -43,6 +43,7 @@ void FFlutterUnrealModule::ShutdownModule()
 		ViewportCreatedHandle.Reset();
 	}
 
+	SlateRenderer = nullptr;
 	CustomPresent.SafeRelease();
 
 #if !WITH_EDITOR
@@ -116,7 +117,7 @@ void FFlutterUnrealModule::OnViewportCreated()
 		FSlateApplication::Get().RegisterInputPreProcessor(InputProcessor);
 	}
 
-	StartCustomPresent(GEngine->GameViewport); //run in RHIThread
+	StartCustomPresent(); //run in RHIThread
 }
 
 #if WITH_EDITOR
@@ -126,25 +127,17 @@ void FFlutterUnrealModule::HandleEndPIE(const bool InIsSimulating)
 }
 #endif
 
-void FFlutterUnrealModule::StartCustomPresent(UGameViewportClient* GameViewport)
+void FFlutterUnrealModule::StartCustomPresent()
 {
+	SlateRenderer = FSlateApplication::Get().GetRenderer();
 	if (!CustomPresent.IsValid())
 	{
-		FSlateRenderer* Renderer = FSlateApplication::Get().GetRenderer();
-		TSharedPtr<SWindow> Window = GameViewport->GetWindow();
-		void* ViewportResource = Renderer->GetViewportResource(*Window);
-
-		FViewportRHIRef* viewport_rhi = nullptr;
-		if (ViewportResource)
-		{
-			viewport_rhi = (FViewportRHIRef*)ViewportResource;
-		}
-
-		if (viewport_rhi && viewport_rhi->IsValid())
+		FRHIViewport* RHIViewport = GetRHIViewport();
+		if (RHIViewport)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("FlutterUnreal StartCustomPresent"));
 			CustomPresent = new FFlutterUnrealCustomPresent();
-			viewport_rhi->GetReference()->SetCustomPresent(CustomPresent);
+			RHIViewport->SetCustomPresent(CustomPresent);
 		}
 	}
 }
@@ -256,6 +249,28 @@ void FFlutterUnrealModule::renderFlutter()
 		}
 #endif
 	}
+}
+
+FRHIViewport* FFlutterUnrealModule::GetRHIViewport() const
+{
+	if (SlateRenderer == nullptr)
+		return nullptr;
+
+	TSharedPtr<SWindow> Window = FGlobalTabmanager::Get()->GetRootWindow();
+	if (!Window.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("the RootWindow isn't valid"));
+		return nullptr;
+	}
+
+	void* ViewportResource = SlateRenderer->GetViewportResource(*Window);
+	if (ViewportResource)
+	{
+		FViewportRHIRef* ViewportRHIRef = (FViewportRHIRef*)ViewportResource;
+		return ViewportRHIRef->GetReference();
+	}
+
+	return nullptr;
 }
 
 #undef LOCTEXT_NAMESPACE

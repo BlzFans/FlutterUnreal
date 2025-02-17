@@ -1,5 +1,6 @@
 
 #include "FlutterEmbeder.h"
+#include "RHI.h"
 
 #if FLUTTERUNREAL_WITH_LUA
 #include "FlutterLua.h"
@@ -93,22 +94,6 @@ public:
     }
 };
 
-void OnBeginDrawing()
-{
-    if (g_flutterRendererType == kD3D11)
-    {
-        MyD3D11DynamicRHI* DynamicRHI = static_cast<MyD3D11DynamicRHI*>(GDynamicRHI);
-        FD3D11Viewport* Viewport = DynamicRHI->GetDrawingViewport();
-        GFlutterUnrealModule->SetRHIViewport(Viewport);
-    }
-    else if(g_flutterRendererType == kD3D12)
-    {
-        FD3D12DynamicRHI* DynamicRHI = (FD3D12DynamicRHI*)GDynamicRHI;
-        FD3D12Viewport* Viewport = DynamicRHI->GetAdapter().GetDrawingViewport();
-        GFlutterUnrealModule->SetRHIViewport(Viewport);
-    }
-}
-
 void* D3D11GetBackBuffer()
 {
     FRHIViewport* RHIViewport = GFlutterUnrealModule->GetRHIViewport();
@@ -126,6 +111,8 @@ void* D3D12GetBackBuffer()
 #endif //PLATFORM_WINDOWS
 
 #if PLATFORM_IOS || PLATFORM_MAC
+
+#if ENGINE_MAJOR_VERSION < 5
 #include "MetalRHI.h"
 #include "MetalRHIPrivate.h"
 
@@ -147,39 +134,54 @@ static MyMetalDeviceContext& getMetalDeviceContext()
 
 static void* GetMetalCommandQueue()
 {
-    FMetalDeviceContext& MetalContext = getMetalDeviceContext();
-    FMetalCommandQueue& MetalCommandQueue = getMetalDeviceContext().GetCommandQueue();
+    MyMetalDeviceContext& MetalContext = getMetalDeviceContext();
+    FMetalCommandQueue& MetalCommandQueue = MetalContext.GetCommandQueue();
     char* ptr = (char*)&MetalCommandQueue;
-    ptr += 8;  //MetalCommandQueue::CommandQueue
-    return (void*)ptr;
+    void* CommandQueue = *(void**)(ptr + 40);  //MetalCommandQueue::CommandQueue
+    //p MetalContext.CommandQueue
+    //p CommandQueue
+    
+    return CommandQueue;
 }
+
+#endif
 
 static FlutterMetalTexture get_next_drawable_callback(void* user_data, const FlutterFrameInfo* frame_info)
 {
+    FlutterMetalTexture texture = {};
+    texture.struct_size = sizeof(FlutterMetalTexture);
+
+    FRHIViewport* RHIViewport = GFlutterUnrealModule->GetRHIViewport();
     return FlutterMetalTexture{};
+};
+
+static bool MetalPresentCallback (void* user_data, const FlutterMetalTexture* texture)
+{
+    g_flutterPresented = true;
+    return true;
 };
 
 #endif
 
-bool VulkanPresentCallback(void* user_data, const FlutterVulkanImage* image)
+static bool VulkanPresentCallback(void* user_data, const FlutterVulkanImage* image)
 {
     g_flutterPresented = true;
     return true;
 }
 
-bool OpenGLPresentCallback(void* user_data)
+static bool OpenGLPresentCallback(void* user_data)
 {
     g_flutterPresented = true;
     return true;
 }
 
-bool D3D11PresentCallback(void* user_data)
+static bool D3D11PresentCallback(void* user_data)
 {
     g_flutterPresented = true;
     return true;
 }
 
-bool D3D12PresentCallback(void* user_data)
+static bool D3D12PresentCallback(void* user_data)
 {
     g_flutterPresented = true;
     return true;
@@ -336,9 +338,9 @@ FlutterRendererConfig flutterGetRenderConfig()
 
         config.open_gl.populate_existing_damage = FlutterDamageCallback;
     }
-#if PLATFORM_WINDOWS
     else if (g_flutterRendererType == kD3D11)
     {
+#if PLATFORM_WINDOWS
         FD3D11DynamicRHI* d3d11RHI = static_cast<FD3D11DynamicRHI*>(GDynamicRHI);
         ID3D11Device* D3D11Device = static_cast<ID3D11Device*>(GDynamicRHI->RHIGetNativeDevice());
         
@@ -352,9 +354,11 @@ FlutterRendererConfig flutterGetRenderConfig()
         config.d3d11.deviceContext = d3d11RHI->GetDeviceContext();
         config.d3d11.getBackBuffer = D3D11GetBackBuffer;
         config.d3d11.present = D3D11PresentCallback;
+#endif
     }
     else if (g_flutterRendererType == kD3D12)
     {
+#if PLATFORM_WINDOWS
         FD3D12DynamicRHI* DynamicRHI = (FD3D12DynamicRHI*) GDynamicRHI;
 
         config.type = kD3D12;
@@ -371,8 +375,8 @@ FlutterRendererConfig flutterGetRenderConfig()
 
         config.d3d12.getBackBuffer = D3D12GetBackBuffer;
         config.d3d12.present = D3D12PresentCallback;
-    }
 #endif
+    }
     else if (g_flutterRendererType == kMetal)
     {
 #if PLATFORM_IOS || PLATFORM_MAC
@@ -380,12 +384,13 @@ FlutterRendererConfig flutterGetRenderConfig()
         config.metal.struct_size = sizeof(config.metal);
 
         config.metal.device = GDynamicRHI->RHIGetNativeDevice();
+#if ENGINE_MAJOR_VERSION < 5
         config.metal.present_command_queue = GetMetalCommandQueue();
+#else
+        config.metal.present_command_queue = GDynamicRHI->RHIGetNativeGraphicsQueue();
+#endif
         config.metal.get_next_drawable_callback = get_next_drawable_callback;
-        config.metal.present_drawable_callback = 
-            [](void* user_data, const FlutterMetalTexture* texture) -> bool {
-                return false;
-            };
+        config.metal.present_drawable_callback = MetalPresentCallback;
 
         config.metal.external_texture_frame_callback = 
             [](void* user_data, int64_t texture_id, size_t width, size_t height, FlutterMetalExternalTexture* texture_out) -> bool {
@@ -558,10 +563,15 @@ void flutterEngineInit(const char* command_line)
 
     g_flutterDataPath = TCHAR_TO_ANSI(*DataPath);
     std::string assets_path = g_flutterDataPath + "/flutter_assets";
+    std::string aot_library_path = g_flutterDataPath + "/app.so";
     std::string icu_data_path = g_flutterDataPath + "/icudtl.dat";
     std::string persistent_cache_path = g_flutterDataPath;
-    std::string aot_library_path = g_flutterDataPath + "/app.so";
     g_luaPath = g_flutterDataPath + "/flutter_assets/lua";
+
+#if PLATFORM_IOS || PLATFORM_MAC
+    assets_path = g_flutterDataPath + "/App.framework/Resources/flutter_assets";
+    aot_library_path = g_flutterDataPath + "/App.framework";
+#endif
 
     // This directory is generated by `flutter build bundle`.
     FlutterProjectArgs args{};
@@ -806,7 +816,7 @@ bool flutterMouseMoveEvent(int32_t x, int32_t y)
     event.y = y;
 
     event.timestamp = getTimeStamp();
-
+    
     FlutterEngineSendPointerEvent(g_flutterEngine, &event, 1);
     return FlutterEngineGetPointerEventHandled();
 }
@@ -848,14 +858,14 @@ bool flutterMouseButtonEvent(int32_t x, int32_t y, bool down)
     event.y = y;
 
     event.timestamp = getTimeStamp();
-
+    
     FlutterEngineSendPointerEvent(g_flutterEngine, &event, 1);
     bool Handled = FlutterEngineGetPointerEventHandled();
     if (Handled && down)
     {
         s_isMouseDown = true;
     }
-
+    
     return Handled;
 }
 

@@ -13,7 +13,7 @@ public:
 	virtual void ShutdownModule() override;
 
 	void OnViewportCreated();
-	void StartCustomPresent(UGameViewportClient* GameViewport);
+	void StartCustomPresent();
 
 	void renderFlutter();
 
@@ -23,7 +23,6 @@ public:
 	void HandleEndPIE(const bool InIsSimulating);
 
 	FRHIViewport* GetRHIViewport() const;
-	void SetRHIViewport(FRHIViewport* Viewport);
 
 protected:
 	FDelegateHandle ViewportCreatedHandle;
@@ -34,22 +33,13 @@ protected:
 	void Tick(float DeltaSeconds);
 
 	FCustomPresentRHIRef CustomPresent;
-	FRHIViewport* RHIViewport = nullptr;
 
 	void* FlutterEngineDLLHandle = nullptr;
 	FThreadSafeCounter FlutterEngineInitStage;
 
 	TSharedPtr<IInputProcessor> InputProcessor;
+
+	FSlateRenderer* SlateRenderer = nullptr;
 };
-
-inline FRHIViewport* FFlutterUnrealModule::GetRHIViewport() const
-{
-	return RHIViewport;
-}
-
-inline void FFlutterUnrealModule::SetRHIViewport(FRHIViewport* Viewport)
-{
-	RHIViewport = Viewport;
-}
 
 extern FFlutterUnrealModule* GFlutterUnrealModule;
