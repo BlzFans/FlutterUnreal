@@ -97,15 +97,25 @@ public:
 void* D3D11GetBackBuffer()
 {
     FRHIViewport* RHIViewport = GFlutterUnrealModule->GetRHIViewport();
-    void* BackBuffer = RHIViewport->GetNativeBackBufferTexture();
-    return BackBuffer;
+    if (RHIViewport)
+    {
+        void* BackBuffer = RHIViewport->GetNativeBackBufferTexture();
+        return BackBuffer;
+    }
+
+    return nullptr;
 }
 
 void* D3D12GetBackBuffer()
 {
     FRHIViewport* RHIViewport = GFlutterUnrealModule->GetRHIViewport();
-    void* BackBuffer = ((FD3D12Resource*)RHIViewport->GetNativeBackBufferTexture())->GetResource();
-    return BackBuffer;
+    if (RHIViewport)
+    {
+        void* BackBuffer = ((FD3D12Resource*)RHIViewport->GetNativeBackBufferTexture())->GetResource();
+        return BackBuffer;
+    }
+
+    return nullptr;
 }
 
 #endif //PLATFORM_WINDOWS

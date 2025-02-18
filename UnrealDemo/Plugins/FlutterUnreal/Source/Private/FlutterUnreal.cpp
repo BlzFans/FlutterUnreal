@@ -19,6 +19,7 @@
 #include "Interfaces/IPluginManager.h"
 #include "Async/Async.h"
 #include "Slate/SceneViewport.h"
+#include "Engine/GameEngine.h"
 
 #define LOCTEXT_NAMESPACE "FFlutterUnrealModule"
 
@@ -27,6 +28,10 @@ void FFlutterUnrealModule::StartupModule()
 {
 	UE_LOG(LogTemp, Warning, TEXT("FlutterUnreal StartupModule"));
 	GFlutterUnrealModule = this;
+
+	if (IsRunningDedicatedServer())
+		return;
+
     ViewportCreatedHandle = UGameViewportClient::OnViewportCreated().AddRaw(this, &FFlutterUnrealModule::OnViewportCreated);
 
 #if WITH_EDITOR
@@ -265,7 +270,14 @@ FRHIViewport* FFlutterUnrealModule::GetRHIViewport() const
 
 	if (!Window.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("the slate window isn't valid"));
+		UGameEngine* GameEngine = Cast<UGameEngine>(GEngine);
+		if (GameEngine)
+			Window = GameEngine->GameViewportWindow.Pin();
+	}
+
+	if (!Window.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetRHIViewport: Cannot find the window"));
 		return nullptr;
 	}
 
