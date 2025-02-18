@@ -259,7 +259,13 @@ FRHIViewport* FFlutterUnrealModule::GetRHIViewport() const
 	TSharedPtr<SWindow> Window = FGlobalTabmanager::Get()->GetRootWindow();
 	if (!Window.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("the RootWindow isn't valid"));
+		if (GEngine->GameViewport)
+			Window = GEngine->GameViewport->GetWindow();
+	}
+
+	if (!Window.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("the slate window isn't valid"));
 		return nullptr;
 	}
 
