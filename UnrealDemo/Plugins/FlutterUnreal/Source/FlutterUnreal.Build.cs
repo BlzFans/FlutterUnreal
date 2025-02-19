@@ -108,7 +108,9 @@ public class FlutterUnreal : ModuleRules
             RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/icudtl.dat"), StagedFileType.NonUFS);
 			RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/flutter_assets/..."), StagedFileType.NonUFS);
 
+#if !UE_5_5_OR_LATER
 			bEnableUndefinedIdentifierWarnings = false;
+#endif
 		}
 		else if (Target.Platform == UnrealTargetPlatform.Android)
 		{
