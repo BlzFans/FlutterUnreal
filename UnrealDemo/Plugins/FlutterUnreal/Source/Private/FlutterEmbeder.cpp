@@ -854,6 +854,7 @@ bool flutterMouseButtonEvent(int32_t x, int32_t y, bool down)
         else
         {
             event.phase = kDown;
+            s_isMouseDown = true;
         }
     }
     else
@@ -877,11 +878,6 @@ bool flutterMouseButtonEvent(int32_t x, int32_t y, bool down)
     
     FlutterEngineSendPointerEvent(g_flutterEngine, &event, 1);
     bool Handled = FlutterEngineGetPointerEventHandled();
-    if (Handled && down)
-    {
-        s_isMouseDown = true;
-    }
-    
     return Handled;
 }
 
