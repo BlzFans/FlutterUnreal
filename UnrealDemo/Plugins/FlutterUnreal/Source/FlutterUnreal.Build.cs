@@ -124,7 +124,7 @@ public class FlutterUnreal : ModuleRules
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
             PrivateDependencyModuleNames.Add("MetalRHI");
-            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/MacOS/libflutter_engine.dylib"));
+            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/macos/libflutter_engine.dylib"));
 
             PrivateIncludePaths.AddRange(
                 new string[] {
