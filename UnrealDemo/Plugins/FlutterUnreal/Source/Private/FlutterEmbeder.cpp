@@ -162,7 +162,13 @@ static FlutterMetalTexture get_next_drawable_callback(void* user_data, const Flu
     texture.struct_size = sizeof(FlutterMetalTexture);
 
     FRHIViewport* RHIViewport = GFlutterUnrealModule->GetRHIViewport();
-    return FlutterMetalTexture{};
+    if (RHIViewport)
+    {
+        void* BackBuffer = RHIViewport->GetNativeBackBufferRT();
+        texture.texture = BackBuffer;
+    }
+
+    return texture;
 };
 
 static bool MetalPresentCallback (void* user_data, const FlutterMetalTexture* texture)
