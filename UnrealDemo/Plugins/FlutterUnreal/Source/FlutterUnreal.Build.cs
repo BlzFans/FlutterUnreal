@@ -10,74 +10,74 @@ using UnrealBuildTool;
 
 public class FlutterUnreal : ModuleRules
 {
-	public FlutterUnreal(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
-		PublicIncludePaths.AddRange(
-			new string[] {
-				// ... add public include paths required here ...
-			}
-			);
-				
-		
-		PrivateIncludePaths.AddRange(
-			new string[] {
-				// ... add other private include paths required here ...
-			}
-			);
-			
-		
-		PublicDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"Core",
-				// ... add other public dependencies that you statically link with here ...
-			}
-			);
-			
-		
-		PrivateDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"CoreUObject",
-				"Engine",
+    public FlutterUnreal(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+        
+        PublicIncludePaths.AddRange(
+            new string[] {
+                // ... add public include paths required here ...
+            }
+        );
+                
+        
+        PrivateIncludePaths.AddRange(
+            new string[] {
+                // ... add other private include paths required here ...
+            }
+        );
+            
+        
+        PublicDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "Core",
+                // ... add other public dependencies that you statically link with here ...
+            }
+        );
+            
+        
+        PrivateDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "CoreUObject",
+                "Engine",
                 "RHI",
 #if UE_5_0_OR_LATER
-				"RHICore",
+                "RHICore",
 #endif
                 "RenderCore",
                 "Slate",
-				"SlateCore",
-				"Projects",
+                "SlateCore",
+                "Projects",
                 "ApplicationCore",
             }
-		);
+        );
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-			PrivateDependencyModuleNames.Add("D3D11RHI");
+            PrivateDependencyModuleNames.Add("D3D11RHI");
             PrivateDependencyModuleNames.Add("D3D12RHI");
             PrivateDependencyModuleNames.Add("VulkanRHI");
-			//PrivateDependencyModuleNames.Add("OpenGLDrv");
+            //PrivateDependencyModuleNames.Add("OpenGLDrv");
 
             PrivateDependencyModuleNames.AddRange(new string[] { "D3D11RHI" });
-			PrivateIncludePaths.AddRange(
-				new string[] {
-					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/Windows/D3D11RHI/Private")),
-					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/Windows/D3D11RHI/Private/Windows")),
-
-					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/D3D12RHI/Private")),
-					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/D3D12RHI/Private/Windows")),
-#if UE_5_0_OR_LATER
-					Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/RHICore/Internal")),
-#endif
-				}
-			);
             PrivateIncludePaths.AddRange(
                 new string[] {
-                        Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/VulkanRHI/Private")),
-                        Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/VulkanRHI/Private/Windows"))
+                    Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/Windows/D3D11RHI/Private")),
+                    Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/Windows/D3D11RHI/Private/Windows")),
+
+                    Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/D3D12RHI/Private")),
+                    Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/D3D12RHI/Private/Windows")),
+#if UE_5_0_OR_LATER
+                    Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/RHICore/Internal")),
+#endif
+                }
+            );
+            PrivateIncludePaths.AddRange(
+                new string[] {
+                    Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/VulkanRHI/Private")),
+                    Path.GetFullPath(Path.Combine(EngineDirectory, "Source/Runtime/VulkanRHI/Private/Windows"))
                 }
             );
 
@@ -97,7 +97,7 @@ public class FlutterUnreal : ModuleRules
             AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelMetricsDiscovery");
 #endif
 
-			PrivateDefinitions.Add("__INTEL_COMPILER=0");
+            PrivateDefinitions.Add("__INTEL_COMPILER=0");
 
             PublicDelayLoadDLLs.Add("flutter_engine.dll");
 
@@ -106,25 +106,29 @@ public class FlutterUnreal : ModuleRules
 
             RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/app.so"), StagedFileType.NonUFS);
             RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/icudtl.dat"), StagedFileType.NonUFS);
-			RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/flutter_assets/..."), StagedFileType.NonUFS);
+            RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "../Resources/data/flutter_assets/..."), StagedFileType.NonUFS);
 
 #if !UE_5_5_OR_LATER
-			bEnableUndefinedIdentifierWarnings = false;
+            bEnableUndefinedIdentifierWarnings = false;
 #endif
-		}
-		else if (Target.Platform == UnrealTargetPlatform.Android)
-		{
+        }
+        else if (Target.Platform == UnrealTargetPlatform.Android)
+        {
             PrivateDependencyModuleNames.Add("VulkanRHI");
             PrivateDependencyModuleNames.Add("OpenGLDrv");
         }
-		else if (Target.Platform == UnrealTargetPlatform.IOS)
-		{
+        else if (Target.Platform == UnrealTargetPlatform.IOS)
+        {
             PrivateDependencyModuleNames.Add("MetalRHI");
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
             PrivateDependencyModuleNames.Add("MetalRHI");
-            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/macos/libflutter_engine.dylib"));
+            
+            string libflutter_engine = Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/macos/libflutter_engine.dylib");
+            PublicAdditionalLibraries.Add(libflutter_engine);
+            PublicDelayLoadDLLs.Add(libflutter_engine);
+            RuntimeDependencies.Add(libflutter_engine);
 
             PrivateIncludePaths.AddRange(
                 new string[] {
@@ -140,6 +144,28 @@ public class FlutterUnreal : ModuleRules
                 }
             );
 #endif
+            string FrameworkFlutterEmbedder = Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/macos/FlutterEmbedder.framework");
+            //PublicAdditionalFrameworks.Add(new Framework(FrameworkFlutterEmbedder, FrameworkFlutterEmbedder, null, true));
+            //Add contents of framework directory as runtime dependencies
+            foreach (string FilePath in Directory.EnumerateFiles(FrameworkFlutterEmbedder, "*", SearchOption.AllDirectories))
+            {
+                RuntimeDependencies.Add(FilePath, StagedFileType.SystemNonUFS);
+            }
+
+            string FrameworkFlutterMacOS = Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/macos/FlutterMacOS.framework");
+            //PublicAdditionalFrameworks.Add(new Framework(FrameworkFlutterMacOS, FrameworkFlutterMacOS, null, true));
+            // Add contents of framework directory as runtime dependencies
+            foreach (string FilePath in Directory.EnumerateFiles(FrameworkFlutterMacOS, "*", SearchOption.AllDirectories))
+            {
+                RuntimeDependencies.Add(FilePath, StagedFileType.SystemNonUFS);
+            }
+
+            string FrameworkApp = Path.Combine(PluginDirectory, "Resources/data/macos/App.framework");
+            // Add contents of framework directory as runtime dependencies
+            foreach (string FilePath in Directory.EnumerateFiles(FrameworkApp, "*", SearchOption.AllDirectories))
+            {
+                RuntimeDependencies.Add(FilePath, StagedFileType.SystemNonUFS);
+            }
         }
 
         if (Target.bBuildEditor == true)
@@ -148,11 +174,11 @@ public class FlutterUnreal : ModuleRules
         }
 
         DynamicallyLoadedModuleNames.AddRange(
-			new string[]
-			{
-				// ... add any modules that your module loads dynamically here ...
-			}
-			);
+            new string[]
+            {
+                // ... add any modules that your module loads dynamically here ...
+            }
+            );
 
         int withLua = GetWithLuaConfig();
         Log.TraceInformation("FLUTTERUNREAL_WITH_LUA={0}", withLua);
@@ -186,6 +212,6 @@ public class FlutterUnreal : ModuleRules
         if (config.GetInt32(section, "WithLua", out withLua))
             return withLua;
         
-		return 1;
+        return 1;
     }
 }

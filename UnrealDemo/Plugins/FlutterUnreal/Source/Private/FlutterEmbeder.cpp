@@ -589,7 +589,7 @@ void flutterEngineInit(const char* command_line)
     aot_library_path = "";
 #endif
 
-#if PLATFORM_MAC && UE_EDITOR
+#if PLATFORM_MAC
     std::string application_library_path;
     if (FlutterEngineRunsAOTCompiledDartCode())
     {
