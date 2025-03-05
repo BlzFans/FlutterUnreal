@@ -239,7 +239,7 @@ Cpp2DartFunction::Cpp2DartFunction(const void* function, const char* name)
 }
 
 static const void* ResolveFfiNativeFunction(const char* name, uintptr_t args) {
-    //UE_LOG(LogTemp, Warning, TEXT("ResolveFfiNativeFunction %s %d"), UTF8_TO_TCHAR(name), (int)args);
+    //UE_LOG(LogTemp, Log, TEXT("ResolveFfiNativeFunction %s %d"), UTF8_TO_TCHAR(name), (int)args);
     for (Cpp2DartFunction* entry = s_cpp2dartFunctionList; entry; entry = entry->next)
     {
         if (strcmp(name, entry->name) == 0)
@@ -494,7 +494,7 @@ void checkScreenResized()
 			g_gameViewPos = gameViewPos;
 			g_gameViewSize = gameViewSize;
 
-			UE_LOG(LogTemp, Warning, TEXT("%d %d %d %d"), gameViewPos.X, gameViewPos.Y, gameViewSize.X, gameViewSize.Y);
+			UE_LOG(LogTemp, Log, TEXT("%d %d %d %d"), gameViewPos.X, gameViewPos.Y, gameViewSize.X, gameViewSize.Y);
 
             DartStateScope scope;
 			Dart_OnGameViewportResize(gameViewPos.X, gameViewPos.Y, gameViewSize.X, gameViewSize.Y);
@@ -516,7 +516,7 @@ void flutterEngineResize(int width, int height)
     {
         g_screenWidth = width;
         g_screenHeight = height;
-        UE_LOG(LogTemp, Warning, TEXT("flutterEngineResize %d %d %f"), width, height, g_pixelRatio);
+        UE_LOG(LogTemp, Log, TEXT("flutterEngineResize %d %d %f"), width, height, g_pixelRatio);
         FlutterWindowMetricsEvent event = {};
         event.struct_size = sizeof(event);
         event.width = width;
@@ -530,6 +530,8 @@ void flutterEngineInit(const char* command_line)
 {
     if (g_flutterEngine)
         return;
+
+    bool isAOT = FlutterEngineRunsAOTCompiledDartCode();
 
 #if FLUTTERUNREAL_WITH_LUA
     initLua();
@@ -575,7 +577,7 @@ void flutterEngineInit(const char* command_line)
     }
 
     FString DataPath = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("FlutterUnreal")->GetBaseDir() + "/Resources/data");
-    UE_LOG(LogTemp, Warning, TEXT("DataPath %s"), *DataPath);
+    UE_LOG(LogTemp, Log, TEXT("DataPath %s"), *DataPath);
 
     g_flutterDataPath = TCHAR_TO_ANSI(*DataPath);
     std::string assets_path = g_flutterDataPath + "/flutter_assets";
@@ -591,7 +593,7 @@ void flutterEngineInit(const char* command_line)
 
 #if PLATFORM_MAC
     std::string application_library_path;
-    if (FlutterEngineRunsAOTCompiledDartCode())
+    if (isAOT)
     {
         application_library_path = std::string("--aot-shared-library-name=") + g_flutterDataPath + "/macos/App.framework/App";
         argv.push_back(application_library_path.c_str());
@@ -622,13 +624,13 @@ void flutterEngineInit(const char* command_line)
         FlutterEngineOnVsync(g_flutterEngine, baton, start, target);
     };*/
 
-    if (FlutterEngineRunsAOTCompiledDartCode() && !aot_library_path.empty())
+    if (isAOT && !aot_library_path.empty())
     {
         g_aotData = LoadAotData(aot_library_path.c_str());
         args.aot_data = g_aotData;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("FlutterEngineRun"));
+    UE_LOG(LogTemp, Log, TEXT("FlutterEngineRun: isAOT %d"), (int)isAOT);
     void* userData = nullptr;
     auto config = flutterGetRenderConfig();
     FlutterEngineResult result = FlutterEngineRun(FLUTTER_ENGINE_VERSION, &config, &args, userData, &g_flutterEngine);
@@ -706,7 +708,7 @@ void flutterEngineRefresh()
         count++;
     }
 
-    //UE_LOG(LogTemp, Warning, TEXT("flutterEngineRefresh FlutterEngineRunLoop count %d"), count);
+    //UE_LOG(LogTemp, Log, TEXT("flutterEngineRefresh FlutterEngineRunLoop count %d"), count);
 }
 */
 
@@ -978,7 +980,7 @@ Cpp2Dart(setDartFunctionPtr)
 
 int64_t testDartCallCpp(int64_t i, int64_t j)
 {
-    UE_LOG(LogTemp, Warning, TEXT("testDartCallCpp %d, %d"), (int)i, (int)j);
+    UE_LOG(LogTemp, Log, TEXT("testDartCallCpp %d, %d"), (int)i, (int)j);
     return i + j;
 }
 
