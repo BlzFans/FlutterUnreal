@@ -127,8 +127,7 @@ public class FlutterUnreal : ModuleRules
             
             string libflutter_engine = Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/macos/libflutter_engine.dylib");
             PublicAdditionalLibraries.Add(libflutter_engine);
-            PublicDelayLoadDLLs.Add(libflutter_engine);
-            RuntimeDependencies.Add(libflutter_engine);
+            RuntimeDependencies.Add("$(BinaryOutputDir)/libflutter_engine.dylib", libflutter_engine); //$(TargetOutputDir)
 
             PrivateIncludePaths.AddRange(
                 new string[] {
@@ -145,26 +144,42 @@ public class FlutterUnreal : ModuleRules
             );
 #endif
             string FrameworkFlutterEmbedder = Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/macos/FlutterEmbedder.framework");
-            //PublicAdditionalFrameworks.Add(new Framework(FrameworkFlutterEmbedder, FrameworkFlutterEmbedder, null, true));
             //Add contents of framework directory as runtime dependencies
-            foreach (string FilePath in Directory.EnumerateFiles(FrameworkFlutterEmbedder, "*", SearchOption.AllDirectories))
+            foreach (string SourcePath in Directory.EnumerateFiles(FrameworkFlutterEmbedder, "*", SearchOption.AllDirectories))
             {
-                RuntimeDependencies.Add(FilePath, StagedFileType.SystemNonUFS);
+                if (SourcePath.EndsWith(".h"))
+                {
+                    continue;
+                }
+
+                string Path = SourcePath.Replace(FrameworkFlutterEmbedder, "$(BinaryOutputDir)/FlutterEmbedder.framework");
+                RuntimeDependencies.Add(Path, SourcePath);
             }
 
             string FrameworkFlutterMacOS = Path.Combine(ModuleDirectory, "ThirdParty/flutter_engine/macos/FlutterMacOS.framework");
-            //PublicAdditionalFrameworks.Add(new Framework(FrameworkFlutterMacOS, FrameworkFlutterMacOS, null, true));
             // Add contents of framework directory as runtime dependencies
-            foreach (string FilePath in Directory.EnumerateFiles(FrameworkFlutterMacOS, "*", SearchOption.AllDirectories))
+            foreach (string SourcePath in Directory.EnumerateFiles(FrameworkFlutterMacOS, "*", SearchOption.AllDirectories))
             {
-                RuntimeDependencies.Add(FilePath, StagedFileType.SystemNonUFS);
+                if (SourcePath.EndsWith(".h"))
+                {
+                    continue;
+                }
+
+                string Path = SourcePath.Replace(FrameworkFlutterMacOS, "$(BinaryOutputDir)/FlutterMacOS.framework");
+                RuntimeDependencies.Add(Path, SourcePath);
             }
 
             string FrameworkApp = Path.Combine(PluginDirectory, "Resources/data/macos/App.framework");
             // Add contents of framework directory as runtime dependencies
-            foreach (string FilePath in Directory.EnumerateFiles(FrameworkApp, "*", SearchOption.AllDirectories))
+            foreach (string SourcePath in Directory.EnumerateFiles(FrameworkApp, "*", SearchOption.AllDirectories))
             {
-                RuntimeDependencies.Add(FilePath, StagedFileType.SystemNonUFS);
+                if (SourcePath.EndsWith(".h"))
+                {
+                    continue;
+                }
+
+                string Path = SourcePath.Replace(FrameworkApp, "$(BinaryOutputDir)/App.framework");
+                RuntimeDependencies.Add(Path, SourcePath);
             }
         }
 
@@ -178,7 +193,7 @@ public class FlutterUnreal : ModuleRules
             {
                 // ... add any modules that your module loads dynamically here ...
             }
-            );
+        );
 
         int withLua = GetWithLuaConfig();
         Log.TraceInformation("FLUTTERUNREAL_WITH_LUA={0}", withLua);
