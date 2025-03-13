@@ -4,7 +4,7 @@
 #include "FlutterMessage.h"
 
 #define RAPIDJSON_HAS_STDSTRING 1
-#if _MSC_VER
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4996)
 #pragma warning(disable: 5054) //deprecated between enumerations of different types
